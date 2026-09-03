@@ -26,7 +26,7 @@ const now = () => Date.now();
 const iso = (value: number) => new Date(value).toISOString();
 const json = (value: unknown) => JSON.stringify(value);
 const text = (value: string) => new TextEncoder().encode(value);
-const cookie = (name: string, value: string, maxAge: number) => `${name}=${value}; Max-Age=${maxAge}; Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
+const cookie = (name: string, value: string, maxAge: number) => `${name}=${value}; Max-Age=${maxAge}; Path=/; HttpOnly; SameSite=${process.env.COOKIE_SAME_SITE || "Lax"}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 const signSession = (id: string) => createHmac("sha256", sessionSecret).update(id).digest("hex");
 const seedFor = (day: string, gameId: string) => createHmac("sha256", dailySecret).update(`${day}:${gameId}`).digest("hex").slice(0, 32);
 
@@ -110,5 +110,5 @@ app.post("/runs/:id/submit", async c => {
 app.get("/leaderboard", c => { const game = c.req.query("game"); const mode = c.req.query("period") === "daily" ? "daily" : "all"; if (!game) return c.json([]); const rows = mode === "daily" ? db.prepare("SELECT address, score, created_at FROM scores WHERE game_id = ? AND mode = 'daily' ORDER BY score DESC, created_at ASC LIMIT 50").all(game) : db.prepare("SELECT address, MAX(score) AS score, MIN(created_at) AS created_at FROM scores WHERE game_id = ? AND mode IN ('daily','ranked') GROUP BY address ORDER BY score DESC, created_at ASC LIMIT 50").all(game); return c.json(rows); });
 app.get("/me", c => { const address = sessionAddress(c); if (!address) return c.json({ address: null, xp: 0, streak: 0 }); const xp = db.prepare("SELECT COALESCE(SUM(xp), 0) AS xp FROM scores WHERE address = ? AND mode IN ('daily','ranked')").get(address) as any; return c.json({ address, xp: xp.xp, streak: 0 }); });
 
-if (process.env.NODE_ENV !== "test") serve({ fetch: app.fetch, port: Number(process.env.PORT || 8787) });
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) serve({ fetch: app.fetch, port: Number(process.env.PORT || 8787) });
 export default app;

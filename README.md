@@ -59,6 +59,23 @@ npm run api
 
 The API listens on `http://localhost:8787` by default. Its main routes are `POST /auth/nonce`, `POST /auth/verify`, `GET /daily`, `POST /runs`, `POST /runs/:id/submit`, `GET /leaderboard`, and `GET /me`.
 
+## Vercel deployment
+
+`vercel.json` configures the Vite output as the frontend and rewrites `/api/*` to the serverless API adapter in `api/index.ts`.
+
+Deploy the frontend/API project with these environment variables:
+
+```text
+VITE_API_URL=https://your-app.vercel.app/api
+VITE_HUB_URL=https://hub.nimiq.com
+WEB_ORIGIN=https://your-app.vercel.app
+COOKIE_SAME_SITE=None
+SESSION_SECRET=<long-random-secret>
+DAILY_SECRET=<long-random-secret>
+```
+
+The current API uses SQLite for local development. Do not use it as the production Vercel leaderboard database: serverless filesystems are ephemeral. Migrate the same schema to Postgres before enabling production ranked submissions.
+
 ## Nimiq Pay
 
 Deploy the static Vite output (`dist/`) to a public HTTPS host, then register/use that URL as your Mini App according to the Nimiq Mini Apps documentation.
