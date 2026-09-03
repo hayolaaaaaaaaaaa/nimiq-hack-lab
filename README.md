@@ -1,6 +1,8 @@
-# Nimiq Hack Lab
+# Nimiq Skill Arcade
 
-An original Nimiq-themed skill arcade inspired by the *category of fast hacking/minigame trainers* represented by NoPixel MiniGames 4.0.
+An original Nimiq-themed competitive skill arcade.
+
+Guest scores are local practice only. Ranked scores require a connected Nimiq address and a verified server submission; the current static build does not claim unverified scores are ranked.
 
 ## Included games
 

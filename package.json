@@ -9,7 +9,7 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
-    "@nimiq/mini-app-sdk": "latest",
+    "@nimiq/mini-app-sdk": "0.1.0",
     "@nimiq/hub-api": "^1.14.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
