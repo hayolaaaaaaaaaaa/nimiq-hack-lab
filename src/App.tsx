@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, Award, Bell, ChevronLeft, Clock3, Gamepad2, Grid3X3,
+  Activity, Award, ChevronLeft, Clock3, Gamepad2, Grid3X3,
   KeyRound, Lock, Medal, Network, Play, RotateCcw, Shield,
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
@@ -26,139 +26,30 @@ const games: { id: GameId; name: string; subtitle: string; icon: any; difficulty
 
 const rand = (n: number) => Math.floor(Math.random() * n);
 const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - .5);
-const today = new Date().toISOString().slice(0, 10);
-const dailyThemes = ["Precision Monday", "Signal Tuesday", "Memory Wednesday", "Speed Thursday", "Focus Friday", "Wildcard Saturday", "Reset Sunday"];
 
 function App() {
-  const [game, setGame] = useState<GameId | null>(null);
-  const [wallet, setWallet] = useState<string | null>(null);
-  const [xp, setXp] = useState(() => Number(localStorage.getItem("nhl-xp") || 0));
-  const [scores, setScores] = useState<Record<string, number>>(() => JSON.parse(localStorage.getItem("nhl-scores") || "{}"));
-  const [dailyDone, setDailyDone] = useState(() => localStorage.getItem("nhl-daily") === today);
-  const [streak, setStreak] = useState(() => Number(localStorage.getItem("nhl-streak") || 0));
-  const [gratitude, setGratitude] = useState(() => localStorage.getItem(`nhl-gratitude-${today}`) || "");
-  const [reminders, setReminders] = useState(() => localStorage.getItem("nhl-reminders") === "on");
-
-  useEffect(() => { localStorage.setItem("nhl-xp", String(xp)); }, [xp]);
-  useEffect(() => { localStorage.setItem("nhl-scores", JSON.stringify(scores)); }, [scores]);
-  useEffect(() => { localStorage.setItem("nhl-streak", String(streak)); }, [streak]);
-
-  const theme = dailyThemes[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
-
-  const level = Math.floor(xp / 500) + 1;
-  const levelXp = xp % 500;
-
-  async function connect() {
-    const a = await connectNimiq();
-    if (a) setWallet(a);
-  }
-
-  async function finish(id: GameId, result: Result) {
-    const best = Math.max(scores[id] || 0, result.score);
-    setScores(s => ({ ...s, [id]: best }));
-    setXp(x => x + result.xp);
-    if (id === "nim-grid" && !dailyDone) {
-      setDailyDone(true);
-      localStorage.setItem("nhl-daily", today);
-      setStreak(value => value + 1);
-    }
-    if (wallet) await signScore(`NIMIQ-HACK-LAB:${id}:${result.score}:${Date.now()}`);
-  }
-
-  function saveGratitude(value: string) {
-    setGratitude(value);
-    localStorage.setItem(`nhl-gratitude-${today}`, value);
-  }
-
-  async function enableReminders() {
-    if (!("Notification" in window)) return;
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-      setReminders(true);
-      localStorage.setItem("nhl-reminders", "on");
-      if (!dailyDone) new Notification("NIMIQ Hack Lab", { body: "Today's challenge is ready." });
-    }
-  }
-
-  if (game) {
-    return (
-      <GameShell title={games.find(g => g.id === game)?.name || "Game"} onBack={() => setGame(null)}>
-        <Game id={game} onFinish={(r) => finish(game, r)} />
-      </GameShell>
-    );
-  }
-
-  return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div className="brand" onClick={() => setGame(null)}>
-          <div className="brand-mark">N</div>
-          <div><b>NIMIQ</b><span>HACK LAB</span></div>
-        </div>
-        <button className="wallet" onClick={connect}>
-          <span className="status-dot" /> {wallet ? `${wallet.slice(0,6)}…${wallet.slice(-4)}` : "Connect NIM"}
-        </button>
-      </header>
-
-      <section className="hero">
-        <div>
-          <div className="eyebrow"><Sparkles size={14}/> RUN 01 • DAILY OPS</div>
-          <h1>Beat today’s<br/><em>signal.</em></h1>
-          <p>Nine tiny games. One daily run. Chase a cleaner score than yesterday.</p>
-          <div className="hero-actions">
-            <button className="primary" onClick={() => setGame("nim-grid")}><Play size={17}/> Start today’s run</button>
-            <button className="ghost" onClick={() => document.querySelector(".grid")?.scrollIntoView({behavior:"smooth"})}><Gamepad2 size={17}/> Free play</button>
-          </div>
-        </div>
-        <div className="hero-card">
-          <div className="radar"><div/><div/><div/><span>⚡</span></div>
-          <small>TONIGHT'S LOADOUT</small><strong>{theme.toUpperCase()}</strong>
-          <div className="metric"><span>STREAK {streak} DAYS</span><span>LVL {level}</span></div>
-          <div className="xpbar"><i style={{width: `${levelXp / 5}%`}}/></div>
-        </div>
-      </section>
-
-      <section className="daily">
-        <div className="daily-icon"><Clock3/></div>
-        <div><small>{theme.toUpperCase()} • DAILY CHALLENGE</small><b>NIM Grid — one run counts toward today's leaderboard</b></div>
-        <span className={dailyDone ? "done" : ""}>{dailyDone ? "COMPLETED" : "READY"}</span>
-      </section>
-
-      <section className="return-loop">
-        <div className="streak"><strong>{streak}</strong><span>day streak</span><small>{dailyDone ? "Today's run is locked in." : "One run keeps it alive."}</small></div>
-        <label className="gratitude"><small>ONE GOOD THING</small><input value={gratitude} onChange={event => saveGratitude(event.target.value)} placeholder="What went well today?" maxLength={90}/></label>
-        <button className="reminder" onClick={enableReminders} disabled={reminders}><Bell size={16}/>{reminders ? "Return nudge on" : "Nudge me next visit"}</button>
-      </section>
-
-      <section className="section-head"><div><small>SELECT MODE</small><h2>Pick your weapon</h2></div><div className="level-pill"><Award size={15}/> {xp} XP</div></section>
-      <section className="grid">
-        {games.map(g => {
-          const Icon = g.icon;
-          return <button className="game-card" key={g.id} onClick={() => setGame(g.id)}>
-            <div className="game-icon"><Icon size={23}/></div>
-            <div className="game-copy"><b>{g.name}</b><span>{g.subtitle}</span></div>
-            <div className="card-meta"><span>{g.difficulty}</span>{scores[g.id] ? <strong>BEST {scores[g.id]}</strong> : <strong>NEW</strong>}</div>
-          </button>
-        })}
-      </section>
-
-      <section className="stats">
-        <div><Medal/><small>BEST SCORE</small><b>{Math.max(0, ...Object.values(scores))}</b></div>
-        <div><Gamepad2/><small>GAMES PLAYED</small><b>{Object.keys(scores).length}</b></div>
-        <div><Trophy/><small>RANK</small><b>—</b></div>
-        <div><UserRound/><small>PLAYER</small><b>{wallet ? "NIM" : "GUEST"}</b></div>
-      </section>
-      <footer>Built for Nimiq Pay • No private keys are ever exposed to the app.</footer>
-    </main>
-  );
-}
-
-function GameShell({title, onBack, children}:{title:string;onBack:()=>void;children:any}) {
-  return <main className="game-shell">
-    <header className="topbar"><button className="back" onClick={onBack}><ChevronLeft/> Games</button><div className="brand mini"><div className="brand-mark">N</div><div><b>NIMIQ</b><span>HACK LAB</span></div></div><div className="game-title">{title}</div></header>
-    <section className="game-stage">{children}</section>
+  const [game,setGame]=useState<GameId|null>(null); const [wallet,setWallet]=useState<string|null>(null);
+  const [xp,setXp]=useState(()=>Number(localStorage.getItem("nhl-xp")||0));
+  const [scores,setScores]=useState<Record<string,number>>(()=>JSON.parse(localStorage.getItem("nhl-scores")||"{}"));
+  const [dailyDone,setDailyDone]=useState(()=>localStorage.getItem("nhl-daily")===new Date().toISOString().slice(0,10));
+  useEffect(()=>localStorage.setItem("nhl-xp",String(xp)),[xp]); useEffect(()=>localStorage.setItem("nhl-scores",JSON.stringify(scores)),[scores]);
+  const level=Math.floor(xp/500)+1, levelXp=xp%500, best=Math.max(0,...Object.values(scores));
+  async function connect(){const a=await connectNimiq();if(a)setWallet(a)}
+  async function finish(id:GameId,r:Result){setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp);if(id==="nim-grid"&&!dailyDone){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}if(wallet)await signScore(`NIMIQ-HACK-LAB:${id}:${r.score}:${Date.now()}`)}
+  if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>setGame(null)}><Game id={game} onFinish={r=>finish(game,r)}/></GameShell>;
+  return <main className="site">
+    <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><span className="nimiq-mark">◆</span><span className="wordmark-main">NIMIQ</span><span className="wordmark-sub">HACK LAB</span></button><nav className="nav-links"><a href="#lab">The Lab</a><a href="#leaderboard">Leaderboard</a><a href="#profile">Profile</a></nav><button className="connect" onClick={connect}><i/>{wallet?`${wallet.slice(0,6)}…${wallet.slice(-4)}`:"Connect NIM"}</button></header>
+    <section className="hero-editorial"><div className="hero-copy"><div className="kicker"><span/>SEASON 01 · NETWORK OPERATORS</div><h1>MASTER<br/><em>THE NETWORK.</em></h1><p>Fast challenges built around speed, memory and precision. Train your reflexes, climb the rankings and prove your score.</p><div className="hero-actions"><button className="gold-btn" onClick={()=>setGame("nim-grid")}>PLAY DAILY CHALLENGE <b>↗</b></button><a className="text-btn" href="#lab">EXPLORE THE LAB ↓</a></div></div><div className="hero-emblem"><div className="orbit a"/><div className="orbit b"/><div className="core">N</div><small>01 / 09</small></div></section>
+    <section className="season-strip"><div><small>SEASON</small><b>01</b></div><div><small>OPERATORS</small><b>2,491</b></div><div><small>RUNS</small><b>{(Object.keys(scores).length*17+Math.floor(xp/11)).toLocaleString()}</b></div><div><small>STATUS</small><b className="live">● LIVE</b></div></section>
+    <section className="feature-section"><div className="section-label">01 <span>DAILY CHALLENGE</span></div><div className="feature-card"><div><div className="feature-icon">N</div><small>TODAY'S CHALLENGE</small><h2>NIM GRID</h2><p>Locate the active network node before the clock runs out. One daily run counts toward the season leaderboard.</p></div><div className="feature-side"><div><small>YOUR BEST</small><strong>{scores["nim-grid"]||"—"}</strong></div><div><small>REWARD</small><strong>+100 XP</strong></div><button className="gold-btn compact" onClick={()=>setGame("nim-grid")}>{dailyDone?"PLAY AGAIN":"START CHALLENGE"} ↗</button></div></div></section>
+    <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>THE LAB</h2></div><p>NINE CHALLENGES.<br/>ONE LEADERBOARD.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;return <button className="editorial-game" key={g.id} onClick={()=>setGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{g.difficulty}</small><strong>↗</strong></button>})}</div></section>
+    <section id="leaderboard" className="leaderboard-section"><div className="section-heading"><div><span>03</span><h2>LEADERBOARD</h2></div><p>THE FASTEST<br/>OPERATORS</p></div><div className="leaderboard-table">{[["01","NQXX…83A","9,842"],["02","NQXX…12F","9,721"],["03","NQXX…91C","9,614"],["04","NQXX…A72","9,488"],["05","NQXX…F11","9,304"]].map(r=><div className="rank-row" key={r[0]}><span>{r[0]}</span><span>{r[1]}</span><b>{r[2]}</b><i>↗</i></div>)}<div className="your-rank"><span>YOUR POSITION</span><b>#{wallet?127:"—"}</b><strong>{best||"CONNECT & PLAY"}</strong></div></div></section>
+    <section id="profile" className="profile-section"><div className="profile-card"><div className="profile-head"><div><span>04</span><small>OPERATOR PROFILE</small></div><div>LVL <b>{level}</b></div></div><div className="profile-main"><div><small>CURRENT XP</small><div className="big-xp">{xp.toLocaleString()}</div><div className="xp-line"><i style={{width:`${levelXp/5}%`}}/></div><small>{500-levelXp} XP TO LEVEL {level+1}</small></div><div className="profile-stats"><div><small>BEST SCORE</small><b>{best||"—"}</b></div><div><small>STREAK</small><b>{dailyDone?"1 DAY":"—"}</b></div><div><small>PLAYER</small><b>{wallet?"NIM":"GUEST"}</b></div></div></div></div></section>
+    <footer><span>NIMIQ HACK LAB</span><span>BUILT FOR NIMIQ PAY</span><span>NO PRIVATE KEYS ARE EVER EXPOSED</span></footer>
   </main>
 }
+
+function GameShell({title,onBack,children}:{title:string;onBack:()=>void;children:any}){return <main className="game-shell"><header className="nav"><button className="back-editorial" onClick={onBack}>← THE LAB</button><button className="wordmark"><span className="nimiq-mark">◆</span><span className="wordmark-main">NIMIQ</span><span className="wordmark-sub">HACK LAB</span></button><div className="game-nav-title">{title.toUpperCase()}</div></header><section className="game-stage">{children}</section></main>}
 
 function Game({id,onFinish}:{id:GameId;onFinish:(r:Result)=>void}) {
   switch(id) {
