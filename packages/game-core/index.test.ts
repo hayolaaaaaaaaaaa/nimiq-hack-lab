@@ -25,3 +25,20 @@ test("replay rejects wrong and superhuman runs", () => {
   const fast = replay("nim-pin", "abc", [{ t: 10, type: "key", value: puzzle.pin }]);
   assert.equal(fast.valid, false);
 });
+
+test("replay validates seeded locks and node breach", () => {
+  const lock = createPuzzle("nim-lock", "lock-seed");
+  assert.equal(lock.gameId, "nim-lock");
+  if (lock.gameId === "nim-lock") {
+    const events = lock.targetAngles.map((angle, index) => ({ t: (index + 1) * 120, type: "choice" as const, value: String(index) }));
+    let time = 0;
+    const solvedEvents = lock.targetAngles.flatMap((angle, index) => Array.from({ length: angle / 45 || 8 }, () => ({ t: (time += 100), type: "choice" as const, value: String(index) })));
+    assert.equal(replay("nim-lock", "lock-seed", solvedEvents).valid, true);
+    assert.equal(events.length, 4);
+  }
+  const breach = createPuzzle("node-breach", "breach-seed");
+  if (breach.gameId === "node-breach") {
+    const events = breach.sequence.map((value, index) => ({ t: (index + 1) * 100, type: "key" as const, value }));
+    assert.equal(replay("node-breach", "breach-seed", events).valid, true);
+  }
+});

@@ -52,11 +52,12 @@ function App() {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
   }
+  const rankedGames = ["nim-pin", "sequence", "memory", "nim-lock", "vault", "node-breach"];
   async function launchGame(id: GameId) {
     setActiveRun(null);
     setRankedSubmission({state:"idle"});
     eventsRef.current=[];
-    if (wallet && ["nim-pin", "sequence", "memory"].includes(id)) setActiveRun(await startRun(id, "ranked"));
+    if (wallet && rankedGames.includes(id)) setActiveRun(await startRun(id, "ranked"));
     runStartedAt.current=performance.now();
     setGame(id);
   }
@@ -68,7 +69,7 @@ function App() {
     <section className="hero-editorial"><div className="hero-copy"><div className="kicker"><span/>SEASON 01 · NETWORK OPERATORS</div><h1>MASTER<br/><em>THE NETWORK.</em></h1><p>Connect, play, and earn a verified score you can take to the leaderboard.</p><div className="hero-actions"><button className="gold-btn" onClick={()=>launchGame(wallet?"nim-pin":"nim-grid")}>{wallet?"PLAY RANKED":"PLAY DAILY CHALLENGE"} <b>↗</b></button><a className="text-btn" href={wallet?"#feature":"#lab"}>{wallet?"PLAY DAILY ↓":"EXPLORE THE LAB ↓"}</a></div></div><div className="hero-emblem"><div className="orbit a"/><div className="orbit b"/><div className="core">N</div><small>01 / 09</small></div></section>
     <section className="season-strip"><div><small>SEASON</small><b>01</b></div><div><small>OPERATORS</small><b>—</b></div><div><small>RANKED RUNS</small><b>—</b></div><div><small>STATUS</small><b className="live">● LOCAL</b></div></section>
     <section className="feature-section"><div className="section-label">01 <span>DAILY CHALLENGE</span></div><div className="feature-card"><div><div className="feature-icon">N</div><small>TODAY'S CHALLENGE</small><h2>NIM GRID</h2><p>Practice locally today. A verified daily run unlocks when this challenge has a replay validator.</p></div><div className="feature-side"><div><small>YOUR BEST</small><strong>{scores["nim-grid"]||"—"}</strong></div><div><small>MODE</small><strong>PRACTICE</strong></div><button className="gold-btn compact" onClick={()=>launchGame("nim-grid")}>{dailyDone?"PLAY AGAIN":"START PRACTICE"} ↗</button></div></div></section>
-    <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>THE LAB</h2></div><p>THREE RANKED.<br/>SIX PRACTICE.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;const ranked=["nim-pin","sequence","memory"].includes(g.id);return <button className="editorial-game" key={g.id} onClick={()=>launchGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{ranked?"RANKED":"PRACTICE"}</small><strong>↗</strong></button>})}</div></section>
+    <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>THE LAB</h2></div><p>SIX RANKED.<br/>THREE PRACTICE.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;const ranked=rankedGames.includes(g.id);return <button className="editorial-game" key={g.id} onClick={()=>launchGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{ranked?"RANKED":"PRACTICE"}</small><strong>↗</strong></button>})}</div></section>
     <section id="leaderboard" className="leaderboard-section"><div className="section-heading"><div><span>03</span><h2>LEADERBOARD</h2></div><p>VERIFIED DAILY<br/>SCORES</p></div><div className="leaderboard-table">{leaderboard.length ? leaderboard.map((row,index)=><div className="rank-row" key={row.address}><span>{String(index+1).padStart(2,"0")}</span><span>{row.address.slice(0,6)}…{row.address.slice(-3)}</span><b>{row.score.toLocaleString()}</b><i>↗</i></div>) : <div className="leaderboard-empty"><b>{wallet ? "NO VERIFIED SCORES YET" : "CONNECT TO RANK"}</b><span>{wallet ? "Be the first connected operator to submit a verified score." : "Guest scores stay on this device and never enter the board."}</span></div>}<div className="your-rank"><span>YOUR BEST</span><b>{wallet ? (best || "—") : "GUEST"}</b><strong>{wallet ? "VERIFICATION REQUIRED" : "LOCAL PRACTICE"}</strong></div></div></section>
     <section id="profile" className="profile-section"><div className="profile-card"><div className="profile-head"><div><span>04</span><small>OPERATOR PROFILE</small></div><div>LVL <b>{level}</b></div></div><div className="profile-main"><div><small>CURRENT XP</small><div className="big-xp">{xp.toLocaleString()}</div><div className="xp-line"><i style={{width:`${levelXp/5}%`}}/></div><small>{500-levelXp} XP TO LEVEL {level+1}</small></div><div className="profile-stats"><div><small>BEST SCORE</small><b>{best||"—"}</b></div><div><small>STREAK</small><b>{dailyDone?"1 DAY":"—"}</b></div><div><small>PLAYER</small><b>{wallet?"NIM":"GUEST"}</b></div></div></div></div></section>
     <footer><span>NIMIQ SKILL ARCADE</span><span>BUILT FOR NIMIQ PAY</span><span>NO PRIVATE KEYS ARE EVER EXPOSED</span></footer>
@@ -84,10 +85,10 @@ function Game({id,run,rankedSubmission,onEvent,onFinish}:{id:GameId;run:Run|null
     case "nim-pin": return <NimPin seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "sequence": return <Sequence seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "memory": return <Memory seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
-    case "nim-lock": return <RotatingLock count={4} limit={20000} title="NIM LOCK" onFinish={onFinish}/>;
-    case "vault": return <RotatingLock count={5} limit={10000} title="NIM VAULT" onFinish={onFinish}/>;
+    case "nim-lock": return <RotatingLock count={4} limit={20000} seed={run?.seed} onEvent={onEvent} title="NIM LOCK" onFinish={onFinish}/>;
+    case "vault": return <RotatingLock count={5} limit={10000} seed={run?.seed} onEvent={onEvent} title="NIM VAULT" onFinish={onFinish}/>;
     case "sync": return <Sync onFinish={onFinish}/>;
-    case "node-breach": return <NodeBreach onFinish={onFinish}/>;
+    case "node-breach": return <NodeBreach seed={run?.seed} onEvent={onEvent} onFinish={onFinish}/>;
   }
 }
 
@@ -152,13 +153,13 @@ function Memory({seed,rankedSubmission,onEvent,onFinish}:{seed?:string;rankedSub
   return <div className="challenge narrow"><GameHUD label="ADDRESS MEMORY" value={show?"MEMORIZE":"REBUILD"} timer={show?"2.5s":"∞"}/><div className="memory-code">{show?code.map(x=><b key={x}>{x}</b>):input.map(x=><b key={Math.random()}>{x}</b>)}</div>{!show&&<div className="memory-options">{options.map((x,i)=><button key={i} onClick={()=>pick(x)}>{x}</button>)}</div>}</div>
 }
 
-function RotatingLock({count,limit,title,onFinish}:{count:number;limit:number;title:string;onFinish:(r:Result)=>void}) {
-  const [angles,setAngles]=useState(()=>Array.from({length:count},()=>rand(8)*45)); const [target]=useState(()=>Array.from({length:count},()=>rand(8)*45)); const [start]=useState(Date.now()); const [done,setDone]=useState(false);
+function RotatingLock({count,limit,seed,onEvent,title,onFinish}:{count:number;limit:number;seed?:string;onEvent:(event:Omit<GameEvent,"t">)=>void;title:string;onFinish:(r:Result)=>void}) {
+  const initialPuzzle = seed ? createPuzzle(title === "NIM VAULT" ? "vault" : "nim-lock", seed) : null; const [angles,setAngles]=useState(()=>Array.from({length:count},()=>seed ? 0 : rand(8)*45)); const [target]=useState(()=>initialPuzzle && (initialPuzzle.gameId === "nim-lock" || initialPuzzle.gameId === "vault") ? initialPuzzle.targetAngles : Array.from({length:count},()=>rand(8)*45)); const [start]=useState(Date.now()); const [done,setDone]=useState(false);
   useEffect(()=>{const t=setInterval(()=>{if(Date.now()-start>=limit&&!done){setDone(true);onFinish({score:0,xp:20})}},100);return()=>clearInterval(t)},[done,start,limit,onFinish]);
   const solved=angles.every((a,i)=>Math.abs(((a-target[i]+540)%360)-180)<12);
   useEffect(()=>{if(solved&&!done){setDone(true);const left=Math.max(0,limit-(Date.now()-start));onFinish({score:Math.round(left/5)+count*100,xp:count===5?220:180,time:Date.now()-start})}},[solved,done,count,limit,onFinish,start]);
   if(done)return <ResultBox result={{score:solved?count*200:0,xp:solved?(count===5?220:180):20}} onRestart={()=>location.reload()}/>;
-  return <div className="challenge"><GameHUD label={title} value={`${count} LOCKS`} timer={`${Math.max(0,((limit-(Date.now()-start))/1000)).toFixed(1)}s`}/><div className="locks">{angles.map((a,i)=><button key={i} className="lock-ring" style={{transform:`rotate(${a}deg)`}} onClick={()=>setAngles(v=>v.map((x,j)=>j===i?x+45:x))}><i/><span style={{transform:`rotate(${-a}deg)`}}>●</span><em style={{transform:`rotate(${-a}deg)`}}>▲</em></button>)}</div><p className="hint">Rotate each ring until its dot aligns with the target marker.</p></div>
+  return <div className="challenge"><GameHUD label={title} value={`${count} LOCKS`} timer={`${Math.max(0,((limit-(Date.now()-start))/1000)).toFixed(1)}s`}/><div className="locks">{angles.map((a,i)=><button key={i} className="lock-ring" style={{transform:`rotate(${a}deg)`}} onClick={()=>{onEvent({type:"choice",value:String(i)});setAngles(v=>v.map((x,j)=>j===i?x+45:x))}}><i/><span style={{transform:`rotate(${-a}deg)`}}>●</span><em style={{transform:`rotate(${-a}deg)`}}>▲</em></button>)}</div><p className="hint">Rotate each ring until its dot aligns with the target marker.</p></div>
 }
 
 function Sync({onFinish}:{onFinish:(r:Result)=>void}) {
@@ -169,10 +170,10 @@ function Sync({onFinish}:{onFinish:(r:Result)=>void}) {
   return <div className="challenge"><GameHUD label="SYNC" value={`${score} PTS`} timer={`${tries} attempts`}/><div className="sync-track"><div className="sync-target"/><div className="sync-cursor" style={{left:`${pos}%`}}/></div><button className="primary huge" onClick={hit}>SYNC PACKET</button></div>
 }
 
-function NodeBreach({onFinish}:{onFinish:(r:Result)=>void}) {
-  const chars="0123456789ABCDEF"; const [seq]=useState(()=>Array.from({length:6},()=>chars[rand(16)])); const [input,setInput]=useState(""); const [time,setTime]=useState(9); const [done,setDone]=useState(false);
+function NodeBreach({seed,onEvent,onFinish}:{seed?:string;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
+  const chars="0123456789ABCDEF"; const initialPuzzle = seed ? createPuzzle("node-breach", seed) : null; const [seq]=useState<string[]>(()=>initialPuzzle?.gameId === "node-breach" ? initialPuzzle.sequence : Array.from({length:6},()=>chars[rand(16)])); const [input,setInput]=useState(""); const [time,setTime]=useState(9); const [done,setDone]=useState(false);
   useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:0,xp:10});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,onFinish]);
-  function p(c:string){const n=input+c;if(seq.slice(0,n.length).join("")!==n){setDone(true);onFinish({score:0,xp:10});return}setInput(n);if(n===seq.join("")){setDone(true);onFinish({score:Math.round(time*100),xp:200})}}
+  function p(c:string){const n=input+c;onEvent({type:"key",value:c});if(seq.slice(0,n.length).join("")!==n){setDone(true);onFinish({score:0,xp:10});return}setInput(n);if(n===seq.join("")){setDone(true);onFinish({score:Math.round(time*100),xp:200})}}
   if(done)return <ResultBox result={{score:input===seq.join("")?Math.round(time*100):0,xp:input===seq.join("")?200:10}} onRestart={()=>location.reload()}/>;
   return <div className="challenge"><GameHUD label="NODE BREACH" value={`${input.length}/6`} timer={`${time.toFixed(1)}s`}/><div className="node-code">{seq.map((x,i)=><span key={i}>{i<input.length?x:"•"}</span>)}</div><div className="hexpad">{chars.split("").map(c=><button key={c} onClick={()=>p(c)}>{c}</button>)}</div></div>
 }

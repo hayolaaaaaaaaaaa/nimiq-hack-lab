@@ -4,7 +4,7 @@ An original Nimiq-themed competitive skill arcade.
 
 Guest scores are local practice only. Ranked scores require a connected Nimiq address and a verified server submission; the current static build does not claim unverified scores are ranked.
 
-The server foundation lives in `server/` and uses SQLite locally. It issues one-time login nonces, verifies Nimiq signatures, creates httpOnly sessions, issues server-owned run seeds, consumes runs once, replays submitted events, and stores only verified ranked scores. `NIM PIN`, `Key Sequence`, and `Address Memory` are the first replay-capable games; other games remain practice-only until validators are added.
+The server foundation lives in `server/` and uses SQLite locally. It issues one-time login nonces, verifies Nimiq signatures, creates httpOnly sessions, issues server-owned run seeds, consumes runs once, replays submitted events, and stores only verified ranked scores. `NIM PIN`, `Key Sequence`, `Address Memory`, `NIM Lock`, `NIM Vault`, and `Node Breach` are replay-capable and ranked. `Block Rush`, `NIM Grid`, and `Sync` remain practice-only until their validators are added.
 
 ## Included games
 
