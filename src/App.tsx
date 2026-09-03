@@ -102,18 +102,18 @@ function App() {
 
       <section className="hero">
         <div>
-          <div className="eyebrow"><Sparkles size={14}/> SKILL • SPEED • PRECISION</div>
-          <h1>Train like a<br/><em>network operator.</em></h1>
-          <p>Fast, replayable challenges built for the Nimiq ecosystem. Play in your browser or inside Nimiq Pay.</p>
+          <div className="eyebrow"><Sparkles size={14}/> RUN 01 • DAILY OPS</div>
+          <h1>Beat today’s<br/><em>signal.</em></h1>
+          <p>Nine tiny games. One daily run. Chase a cleaner score than yesterday.</p>
           <div className="hero-actions">
-            <button className="primary" onClick={() => setGame("nim-grid")}><Play size={17}/> Play daily challenge</button>
-            <button className="ghost" onClick={connect}><Shield size={17}/> {wallet ? "Wallet connected" : "Connect wallet"}</button>
+            <button className="primary" onClick={() => setGame("nim-grid")}><Play size={17}/> Start today’s run</button>
+            <button className="ghost" onClick={() => document.querySelector(".grid")?.scrollIntoView({behavior:"smooth"})}><Gamepad2 size={17}/> Free play</button>
           </div>
         </div>
         <div className="hero-card">
           <div className="radar"><div/><div/><div/><span>⚡</span></div>
-          <small>NETWORK STATUS</small><strong>ONLINE</strong>
-          <div className="metric"><span>LEVEL {level}</span><span>{xp} XP</span></div>
+          <small>TONIGHT'S LOADOUT</small><strong>{theme.toUpperCase()}</strong>
+          <div className="metric"><span>STREAK {streak} DAYS</span><span>LVL {level}</span></div>
           <div className="xpbar"><i style={{width: `${levelXp / 5}%`}}/></div>
         </div>
       </section>
@@ -130,7 +130,7 @@ function App() {
         <button className="reminder" onClick={enableReminders} disabled={reminders}><Bell size={16}/>{reminders ? "Return nudge on" : "Nudge me next visit"}</button>
       </section>
 
-      <section className="section-head"><div><small>THE LAB</small><h2>Choose a challenge</h2></div><div className="level-pill"><Award size={15}/> Level {level}</div></section>
+      <section className="section-head"><div><small>SELECT MODE</small><h2>Pick your weapon</h2></div><div className="level-pill"><Award size={15}/> {xp} XP</div></section>
       <section className="grid">
         {games.map(g => {
           const Icon = g.icon;
