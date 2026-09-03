@@ -4,7 +4,7 @@ import {
   KeyRound, Lock, Medal, Network, Play, RotateCcw, Shield,
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
-import { connectNimiq, isNimiqPay, signScore } from "./nimiq";
+import { connectNimiq, isNimiqPay } from "./nimiq";
 
 type GameId =
   | "block-rush" | "nim-grid" | "nim-pin" | "sequence"
@@ -44,7 +44,7 @@ function App() {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
   }
-  async function finish(id:GameId,r:Result){setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp);if(id==="nim-grid"&&!dailyDone){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}if(wallet)await signScore(`NIMIQ-HACK-LAB:${id}:${r.score}:${Date.now()}`)}
+  function finish(id:GameId,r:Result){setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp);if(id==="nim-grid"&&!dailyDone){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}}
   if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>setGame(null)}><Game id={game} onFinish={r=>finish(game,r)}/></GameShell>;
   return <main className="site">
     <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><span className="nimiq-mark">◆</span><span className="wordmark-main">NIMIQ</span><span className="wordmark-sub">SKILL ARCADE</span></button><nav className="nav-links"><a href="#lab">The Lab</a><a href="#leaderboard">Leaderboard</a><a href="#profile">Profile</a></nav><button className="connect" onClick={connect}><i/>{wallet?`${wallet.slice(0,6)}…${wallet.slice(-4)}`:(isNimiqPay()?"Connect Nimiq Pay":"Connect NIM")}</button></header>
