@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, Award, ChevronLeft, Clock3, Gamepad2, Grid3X3,
+  Activity, Award, Bell, ChevronLeft, Clock3, Gamepad2, Grid3X3,
   KeyRound, Lock, Medal, Network, Play, RotateCcw, Shield,
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
@@ -26,16 +26,24 @@ const games: { id: GameId; name: string; subtitle: string; icon: any; difficulty
 
 const rand = (n: number) => Math.floor(Math.random() * n);
 const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - .5);
+const today = new Date().toISOString().slice(0, 10);
+const dailyThemes = ["Precision Monday", "Signal Tuesday", "Memory Wednesday", "Speed Thursday", "Focus Friday", "Wildcard Saturday", "Reset Sunday"];
 
 function App() {
   const [game, setGame] = useState<GameId | null>(null);
   const [wallet, setWallet] = useState<string | null>(null);
   const [xp, setXp] = useState(() => Number(localStorage.getItem("nhl-xp") || 0));
   const [scores, setScores] = useState<Record<string, number>>(() => JSON.parse(localStorage.getItem("nhl-scores") || "{}"));
-  const [dailyDone, setDailyDone] = useState(() => localStorage.getItem("nhl-daily") === new Date().toISOString().slice(0,10));
+  const [dailyDone, setDailyDone] = useState(() => localStorage.getItem("nhl-daily") === today);
+  const [streak, setStreak] = useState(() => Number(localStorage.getItem("nhl-streak") || 0));
+  const [gratitude, setGratitude] = useState(() => localStorage.getItem(`nhl-gratitude-${today}`) || "");
+  const [reminders, setReminders] = useState(() => localStorage.getItem("nhl-reminders") === "on");
 
   useEffect(() => { localStorage.setItem("nhl-xp", String(xp)); }, [xp]);
   useEffect(() => { localStorage.setItem("nhl-scores", JSON.stringify(scores)); }, [scores]);
+  useEffect(() => { localStorage.setItem("nhl-streak", String(streak)); }, [streak]);
+
+  const theme = dailyThemes[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
   const level = Math.floor(xp / 500) + 1;
   const levelXp = xp % 500;
@@ -51,9 +59,25 @@ function App() {
     setXp(x => x + result.xp);
     if (id === "nim-grid" && !dailyDone) {
       setDailyDone(true);
-      localStorage.setItem("nhl-daily", new Date().toISOString().slice(0,10));
+      localStorage.setItem("nhl-daily", today);
+      setStreak(value => value + 1);
     }
     if (wallet) await signScore(`NIMIQ-HACK-LAB:${id}:${result.score}:${Date.now()}`);
+  }
+
+  function saveGratitude(value: string) {
+    setGratitude(value);
+    localStorage.setItem(`nhl-gratitude-${today}`, value);
+  }
+
+  async function enableReminders() {
+    if (!("Notification" in window)) return;
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      setReminders(true);
+      localStorage.setItem("nhl-reminders", "on");
+      if (!dailyDone) new Notification("NIMIQ Hack Lab", { body: "Today's challenge is ready." });
+    }
   }
 
   if (game) {
@@ -96,8 +120,14 @@ function App() {
 
       <section className="daily">
         <div className="daily-icon"><Clock3/></div>
-        <div><small>DAILY CHALLENGE</small><b>NIM Grid — one run counts toward today's leaderboard</b></div>
+        <div><small>{theme.toUpperCase()} • DAILY CHALLENGE</small><b>NIM Grid — one run counts toward today's leaderboard</b></div>
         <span className={dailyDone ? "done" : ""}>{dailyDone ? "COMPLETED" : "READY"}</span>
+      </section>
+
+      <section className="return-loop">
+        <div className="streak"><strong>{streak}</strong><span>day streak</span><small>{dailyDone ? "Today's run is locked in." : "One run keeps it alive."}</small></div>
+        <label className="gratitude"><small>ONE GOOD THING</small><input value={gratitude} onChange={event => saveGratitude(event.target.value)} placeholder="What went well today?" maxLength={90}/></label>
+        <button className="reminder" onClick={enableReminders} disabled={reminders}><Bell size={16}/>{reminders ? "Return nudge on" : "Nudge me next visit"}</button>
       </section>
 
       <section className="section-head"><div><small>THE LAB</small><h2>Choose a challenge</h2></div><div className="level-pill"><Award size={15}/> Level {level}</div></section>
