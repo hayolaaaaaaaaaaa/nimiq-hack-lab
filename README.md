@@ -4,6 +4,8 @@ An original Nimiq-themed competitive skill arcade.
 
 Guest scores are local practice only. Ranked scores require a connected Nimiq address and a verified server submission; the current static build does not claim unverified scores are ranked.
 
+The server foundation lives in `server/` and uses SQLite locally. It issues one-time login nonces, verifies Nimiq signatures, creates httpOnly sessions, issues server-owned run seeds, consumes runs once, replays submitted events, and stores only verified ranked scores. `NIM PIN`, `Key Sequence`, and `Address Memory` are the first replay-capable games; other games remain practice-only until validators are added.
+
 ## Included games
 
 1. Block Rush — connected-block clearing
@@ -36,7 +38,7 @@ Connecting a Nimiq wallet is optional. No private key or seed phrase is requeste
 
 - **Browser:** `@nimiq/hub-api` opens Nimiq Hub and requests a signed login message. The selected Nimiq address is returned as the operator identity.
 - **Nimiq Pay:** `@nimiq/mini-app-sdk` uses the injected provider and calls `listAccounts()`.
-- **Score signing:** completed scores can be signed through Hub in a browser or through `nimiq.sign()` inside Nimiq Pay.
+- **Ranked scoring:** scores are not accepted directly from the client. A connected player receives a server-issued run containing a unique run ID and challenge seed. Ranked submissions are validated server-side from the recorded replay before being written to the leaderboard.
 
 No private key or seed phrase is requested or exposed.
 
@@ -48,6 +50,14 @@ npm run dev
 ```
 
 Open the printed local URL.
+
+To run the API locally in a second terminal:
+
+```bash
+npm run api
+```
+
+The API listens on `http://localhost:8787` by default. Its main routes are `POST /auth/nonce`, `POST /auth/verify`, `GET /daily`, `POST /runs`, `POST /runs/:id/submit`, `GET /leaderboard`, and `GET /me`.
 
 ## Nimiq Pay
 

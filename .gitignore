@@ -1,6 +1,7 @@
 node_modules
 dist
 *.tsbuildinfo
+*.sqlite
 .env
 .env.*
 !.env.example
