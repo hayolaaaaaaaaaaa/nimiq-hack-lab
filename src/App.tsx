@@ -4,7 +4,7 @@ import {
   KeyRound, Lock, Medal, Network, Play, RotateCcw, Shield,
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
-import { connectNimiq, signScore } from "./nimiq";
+import { connectNimiq, isNimiqPay, signScore } from "./nimiq";
 
 type GameId =
   | "block-rush" | "nim-grid" | "nim-pin" | "sequence"
@@ -34,11 +34,21 @@ function App() {
   const [dailyDone,setDailyDone]=useState(()=>localStorage.getItem("nhl-daily")===new Date().toISOString().slice(0,10));
   useEffect(()=>localStorage.setItem("nhl-xp",String(xp)),[xp]); useEffect(()=>localStorage.setItem("nhl-scores",JSON.stringify(scores)),[scores]);
   const level=Math.floor(xp/500)+1, levelXp=xp%500, best=Math.max(0,...Object.values(scores));
-  async function connect(){const a=await connectNimiq();if(a)setWallet(a)}
+  const [walletError,setWalletError]=useState<string|null>(null);
+  async function connect(){
+    setWalletError(null);
+    try {
+      const a=await connectNimiq();
+      if(a) setWallet(a);
+    } catch (e) {
+      setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
+    }
+  }
   async function finish(id:GameId,r:Result){setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp);if(id==="nim-grid"&&!dailyDone){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}if(wallet)await signScore(`NIMIQ-HACK-LAB:${id}:${r.score}:${Date.now()}`)}
   if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>setGame(null)}><Game id={game} onFinish={r=>finish(game,r)}/></GameShell>;
   return <main className="site">
-    <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><span className="nimiq-mark">◆</span><span className="wordmark-main">NIMIQ</span><span className="wordmark-sub">HACK LAB</span></button><nav className="nav-links"><a href="#lab">The Lab</a><a href="#leaderboard">Leaderboard</a><a href="#profile">Profile</a></nav><button className="connect" onClick={connect}><i/>{wallet?`${wallet.slice(0,6)}…${wallet.slice(-4)}`:"Connect NIM"}</button></header>
+    <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><span className="nimiq-mark">◆</span><span className="wordmark-main">NIMIQ</span><span className="wordmark-sub">HACK LAB</span></button><nav className="nav-links"><a href="#lab">The Lab</a><a href="#leaderboard">Leaderboard</a><a href="#profile">Profile</a></nav><button className="connect" onClick={connect}><i/>{wallet?`${wallet.slice(0,6)}…${wallet.slice(-4)}`:(isNimiqPay()?"Connect Nimiq Pay":"Connect NIM")}</button></header>
+    <section className="wallet-status">{wallet ? <><span className="wallet-live">● WALLET CONNECTED</span><span>{wallet}</span></> : walletError ? <><span className="wallet-error">WALLET CONNECTION FAILED</span><span>{walletError}</span></> : <><span>WALLET</span><span>{isNimiqPay()?"Nimiq Pay detected — ready to connect":"Connect with Nimiq Hub in your browser"}</span></>}</section>
     <section className="hero-editorial"><div className="hero-copy"><div className="kicker"><span/>SEASON 01 · NETWORK OPERATORS</div><h1>MASTER<br/><em>THE NETWORK.</em></h1><p>Fast challenges built around speed, memory and precision. Train your reflexes, climb the rankings and prove your score.</p><div className="hero-actions"><button className="gold-btn" onClick={()=>setGame("nim-grid")}>PLAY DAILY CHALLENGE <b>↗</b></button><a className="text-btn" href="#lab">EXPLORE THE LAB ↓</a></div></div><div className="hero-emblem"><div className="orbit a"/><div className="orbit b"/><div className="core">N</div><small>01 / 09</small></div></section>
     <section className="season-strip"><div><small>SEASON</small><b>01</b></div><div><small>OPERATORS</small><b>2,491</b></div><div><small>RUNS</small><b>{(Object.keys(scores).length*17+Math.floor(xp/11)).toLocaleString()}</b></div><div><small>STATUS</small><b className="live">● LIVE</b></div></section>
     <section className="feature-section"><div className="section-label">01 <span>DAILY CHALLENGE</span></div><div className="feature-card"><div><div className="feature-icon">N</div><small>TODAY'S CHALLENGE</small><h2>NIM GRID</h2><p>Locate the active network node before the clock runs out. One daily run counts toward the season leaderboard.</p></div><div className="feature-side"><div><small>YOUR BEST</small><strong>{scores["nim-grid"]||"—"}</strong></div><div><small>REWARD</small><strong>+100 XP</strong></div><button className="gold-btn compact" onClick={()=>setGame("nim-grid")}>{dailyDone?"PLAY AGAIN":"START CHALLENGE"} ↗</button></div></div></section>

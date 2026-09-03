@@ -32,9 +32,11 @@ Connecting a Nimiq wallet is optional. No private key or seed phrase is requeste
 
 ## Nimiq integration
 
-The app uses `@nimiq/mini-app-sdk`. Inside Nimiq Pay it attempts to initialize the Nimiq provider and list the user's account. Scores can optionally be signed by the wallet provider.
+- **Browser:** `@nimiq/hub-api` opens Nimiq Hub and requests a signed login message. The selected Nimiq address is returned as the operator identity.
+- **Nimiq Pay:** `@nimiq/mini-app-sdk` uses the injected provider and calls `listAccounts()`.
+- **Score signing:** completed scores can be signed through Hub in a browser or through `nimiq.sign()` inside Nimiq Pay.
 
-No private key or seed phrase is requested.
+No private key or seed phrase is requested or exposed.
 
 ## Run
 
