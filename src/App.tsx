@@ -5,6 +5,9 @@ import {
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
 import { connectNimiq, isNimiqPay } from "./nimiq";
+import { getLeaderboard, startRun, submitRun, type Run } from "./api";
+import type { GameEvent } from "../packages/game-core/index";
+import { createPuzzle } from "../packages/game-core/index";
 
 type GameId =
   | "block-rush" | "nim-grid" | "nim-pin" | "sequence"
@@ -28,11 +31,14 @@ const rand = (n: number) => Math.floor(Math.random() * n);
 const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - .5);
 
 function App() {
-  const [game,setGame]=useState<GameId|null>(null); const [wallet,setWallet]=useState<string|null>(null);
+  const [game,setGame]=useState<GameId|null>(null); const [wallet,setWallet]=useState<string|null>(null); const [activeRun,setActiveRun]=useState<Run|null>(null);
+  const eventsRef=useRef<GameEvent[]>([]); const runStartedAt=useRef(0);
+  const [leaderboard,setLeaderboard]=useState<Array<{address:string;score:number}>>([]);
   const [xp,setXp]=useState(()=>Number(localStorage.getItem("nhl-xp")||0));
   const [scores,setScores]=useState<Record<string,number>>(()=>JSON.parse(localStorage.getItem("nhl-scores")||"{}"));
   const [dailyDone,setDailyDone]=useState(()=>localStorage.getItem("nhl-daily")===new Date().toISOString().slice(0,10));
   useEffect(()=>localStorage.setItem("nhl-xp",String(xp)),[xp]); useEffect(()=>localStorage.setItem("nhl-scores",JSON.stringify(scores)),[scores]);
+  useEffect(()=>{getLeaderboard("sequence").then(rows=>setLeaderboard(rows)).catch(()=>setLeaderboard([]))},[]);
   const level=Math.floor(xp/500)+1, levelXp=xp%500, best=Math.max(0,...Object.values(scores));
   const [walletError,setWalletError]=useState<string|null>(null);
   async function connect(){
@@ -44,16 +50,23 @@ function App() {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
   }
-  function finish(id:GameId,r:Result){setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp);if(id==="nim-grid"&&!dailyDone){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}}
-  if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>setGame(null)}><Game id={game} onFinish={r=>finish(game,r)}/></GameShell>;
+  async function launchGame(id: GameId) {
+    setActiveRun(null);
+    eventsRef.current=[];
+    if (wallet && ["nim-pin", "sequence", "memory"].includes(id)) setActiveRun(await startRun(id, "ranked"));
+    runStartedAt.current=performance.now();
+    setGame(id);
+  }
+  async function finish(id:GameId,r:Result){if(activeRun){await submitRun(activeRun.runId,eventsRef.current);return}setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp);if(id==="nim-grid"&&!dailyDone){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}}
+  if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>{setGame(null);setActiveRun(null)}}><Game id={game} run={activeRun} onEvent={event=>eventsRef.current.push({...event,t:Math.round(performance.now()-runStartedAt.current)})} onFinish={r=>finish(game,r)}/></GameShell>;
   return <main className="site">
     <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><span className="nimiq-mark">◆</span><span className="wordmark-main">NIMIQ</span><span className="wordmark-sub">SKILL ARCADE</span></button><nav className="nav-links"><a href="#lab">The Lab</a><a href="#leaderboard">Leaderboard</a><a href="#profile">Profile</a></nav><button className="connect" onClick={connect}><i/>{wallet?`${wallet.slice(0,6)}…${wallet.slice(-4)}`:(isNimiqPay()?"Connect Nimiq Pay":"Connect NIM")}</button></header>
     <section className="wallet-status">{wallet ? <><span className="wallet-live">● WALLET CONNECTED</span><span>{wallet}</span></> : walletError ? <><span className="wallet-error">WALLET CONNECTION FAILED</span><span>{walletError}</span></> : <><span>WALLET</span><span>{isNimiqPay()?"Nimiq Pay detected — ready to connect":"Connect with Nimiq Hub in your browser"}</span></>}</section>
     <section className="hero-editorial"><div className="hero-copy"><div className="kicker"><span/>SEASON 01 · NETWORK OPERATORS</div><h1>MASTER<br/><em>THE NETWORK.</em></h1><p>Fast challenges built around speed, memory and precision. Train your reflexes, climb the rankings and prove your score.</p><div className="hero-actions"><button className="gold-btn" onClick={()=>setGame("nim-grid")}>PLAY DAILY CHALLENGE <b>↗</b></button><a className="text-btn" href="#lab">EXPLORE THE LAB ↓</a></div></div><div className="hero-emblem"><div className="orbit a"/><div className="orbit b"/><div className="core">N</div><small>01 / 09</small></div></section>
     <section className="season-strip"><div><small>SEASON</small><b>01</b></div><div><small>OPERATORS</small><b>—</b></div><div><small>RANKED RUNS</small><b>—</b></div><div><small>STATUS</small><b className="live">● LOCAL</b></div></section>
-    <section className="feature-section"><div className="section-label">01 <span>DAILY CHALLENGE</span></div><div className="feature-card"><div><div className="feature-icon">N</div><small>TODAY'S CHALLENGE</small><h2>NIM GRID</h2><p>Locate the active network node before the clock runs out. One daily run counts toward the season leaderboard.</p></div><div className="feature-side"><div><small>YOUR BEST</small><strong>{scores["nim-grid"]||"—"}</strong></div><div><small>REWARD</small><strong>+100 XP</strong></div><button className="gold-btn compact" onClick={()=>setGame("nim-grid")}>{dailyDone?"PLAY AGAIN":"START CHALLENGE"} ↗</button></div></div></section>
-    <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>THE LAB</h2></div><p>NINE CHALLENGES.<br/>ONE LEADERBOARD.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;return <button className="editorial-game" key={g.id} onClick={()=>setGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{g.difficulty}</small><strong>↗</strong></button>})}</div></section>
-    <section id="leaderboard" className="leaderboard-section"><div className="section-heading"><div><span>03</span><h2>LEADERBOARD</h2></div><p>VERIFIED DAILY<br/>SCORES</p></div><div className="leaderboard-table">{wallet ? <div className="leaderboard-empty"><b>NO VERIFIED SCORES YET</b><span>Be the first connected operator to submit today.</span></div> : <div className="leaderboard-empty"><b>CONNECT TO RANK</b><span>Guest scores stay on this device and never enter the board.</span></div>}<div className="your-rank"><span>YOUR BEST</span><b>{wallet ? (best || "—") : "GUEST"}</b><strong>{wallet ? "VERIFICATION REQUIRED" : "LOCAL PRACTICE"}</strong></div></div></section>
+    <section className="feature-section"><div className="section-label">01 <span>DAILY CHALLENGE</span></div><div className="feature-card"><div><div className="feature-icon">N</div><small>TODAY'S CHALLENGE</small><h2>NIM GRID</h2><p>Practice locally today. A verified daily run unlocks when this challenge has a replay validator.</p></div><div className="feature-side"><div><small>YOUR BEST</small><strong>{scores["nim-grid"]||"—"}</strong></div><div><small>MODE</small><strong>PRACTICE</strong></div><button className="gold-btn compact" onClick={()=>launchGame("nim-grid")}>{dailyDone?"PLAY AGAIN":"START PRACTICE"} ↗</button></div></div></section>
+    <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>THE LAB</h2></div><p>THREE RANKED.<br/>SIX PRACTICE.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;const ranked=["nim-pin","sequence","memory"].includes(g.id);return <button className="editorial-game" key={g.id} onClick={()=>launchGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{ranked?"RANKED":"PRACTICE"}</small><strong>↗</strong></button>})}</div></section>
+    <section id="leaderboard" className="leaderboard-section"><div className="section-heading"><div><span>03</span><h2>LEADERBOARD</h2></div><p>VERIFIED DAILY<br/>SCORES</p></div><div className="leaderboard-table">{leaderboard.length ? leaderboard.map((row,index)=><div className="rank-row" key={row.address}><span>{String(index+1).padStart(2,"0")}</span><span>{row.address.slice(0,6)}…{row.address.slice(-3)}</span><b>{row.score.toLocaleString()}</b><i>↗</i></div>) : <div className="leaderboard-empty"><b>{wallet ? "NO VERIFIED SCORES YET" : "CONNECT TO RANK"}</b><span>{wallet ? "Be the first connected operator to submit a verified score." : "Guest scores stay on this device and never enter the board."}</span></div>}<div className="your-rank"><span>YOUR BEST</span><b>{wallet ? (best || "—") : "GUEST"}</b><strong>{wallet ? "VERIFICATION REQUIRED" : "LOCAL PRACTICE"}</strong></div></div></section>
     <section id="profile" className="profile-section"><div className="profile-card"><div className="profile-head"><div><span>04</span><small>OPERATOR PROFILE</small></div><div>LVL <b>{level}</b></div></div><div className="profile-main"><div><small>CURRENT XP</small><div className="big-xp">{xp.toLocaleString()}</div><div className="xp-line"><i style={{width:`${levelXp/5}%`}}/></div><small>{500-levelXp} XP TO LEVEL {level+1}</small></div><div className="profile-stats"><div><small>BEST SCORE</small><b>{best||"—"}</b></div><div><small>STREAK</small><b>{dailyDone?"1 DAY":"—"}</b></div><div><small>PLAYER</small><b>{wallet?"NIM":"GUEST"}</b></div></div></div></div></section>
     <footer><span>NIMIQ SKILL ARCADE</span><span>BUILT FOR NIMIQ PAY</span><span>NO PRIVATE KEYS ARE EVER EXPOSED</span></footer>
   </main>
@@ -61,13 +74,13 @@ function App() {
 
 function GameShell({title,onBack,children}:{title:string;onBack:()=>void;children:any}){return <main className="game-shell"><header className="nav"><button className="back-editorial" onClick={onBack}>← THE LAB</button><button className="wordmark"><span className="nimiq-mark">◆</span><span className="wordmark-main">NIMIQ</span><span className="wordmark-sub">SKILL ARCADE</span></button><div className="game-nav-title">{title.toUpperCase()}</div></header><section className="game-stage">{children}</section></main>}
 
-function Game({id,onFinish}:{id:GameId;onFinish:(r:Result)=>void}) {
+function Game({id,run,onEvent,onFinish}:{id:GameId;run:Run|null;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
   switch(id) {
     case "block-rush": return <BlockRush onFinish={onFinish}/>;
     case "nim-grid": return <NimGrid onFinish={onFinish}/>;
-    case "nim-pin": return <NimPin onFinish={onFinish}/>;
-    case "sequence": return <Sequence onFinish={onFinish}/>;
-    case "memory": return <Memory onFinish={onFinish}/>;
+    case "nim-pin": return <NimPin seed={run?.seed} onEvent={onEvent} onFinish={onFinish}/>;
+    case "sequence": return <Sequence seed={run?.seed} onEvent={onEvent} onFinish={onFinish}/>;
+    case "memory": return <Memory seed={run?.seed} onEvent={onEvent} onFinish={onFinish}/>;
     case "nim-lock": return <RotatingLock count={4} limit={20000} title="NIM LOCK" onFinish={onFinish}/>;
     case "vault": return <RotatingLock count={5} limit={10000} title="NIM VAULT" onFinish={onFinish}/>;
     case "sync": return <Sync onFinish={onFinish}/>;
@@ -104,27 +117,27 @@ function NimGrid({onFinish}:{onFinish:(r:Result)=>void}) {
   return <div className="challenge"><GameHUD label="NIM GRID" value={`${hits} HITS`} timer={`${time.toFixed(1)}s`}/><div className="nim-grid">{Array.from({length:16},(_,i)=><button key={i} className={i===active?"node active":"node"} onClick={()=>{if(i===active){setHits(h=>h+1);setActive(rand(16))}}}><span/></button>)}</div><p className="hint">Hit the glowing node. Every correct hit moves it.</p></div>
 }
 
-function NimPin({onFinish}:{onFinish:(r:Result)=>void}) {
-  const [pin,setPin]=useState(()=>String(rand(9000)+1000)); const [input,setInput]=useState(""); const [time,setTime]=useState(12); const [done,setDone]=useState(false);
-  useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);return 0}return x-.1}),100);return()=>clearInterval(t)},[done]);
-  function key(k:string){if(done)return; const n=input+k;if(n.length<=4)setInput(n); if(n===pin){const score=Math.max(100,Math.round(time*100));setDone(true);onFinish({score,xp:125,time:12-time})}}
+function NimPin({seed,onEvent,onFinish}:{seed?:string;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
+  const initialPin = seed ? createPuzzle("nim-pin", seed) : null; const [pin,setPin]=useState(()=>initialPin?.gameId === "nim-pin" ? initialPin.pin : String(rand(9000)+1000)); const [input,setInput]=useState(""); const [time,setTime]=useState(12); const [done,setDone]=useState(false);
+  useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:0,xp:25});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,onFinish]);
+  function key(k:string){if(done)return; const n=input+k;if(n.length<=4)setInput(n); if(n.length===4){onEvent({type:"key",value:n});if(n===pin){const score=Math.max(100,Math.round(time*100));setDone(true);onFinish({score,xp:125,time:12-time})}else{setDone(true);onFinish({score:0,xp:25})}}}
   if(done)return <ResultBox result={{score:input===pin?Math.max(100,Math.round(time*100)):0,xp:input===pin?125:25}} onRestart={()=>{setPin(String(rand(9000)+1000));setInput("");setTime(12);setDone(false)}}/>;
   return <div className="challenge narrow"><GameHUD label="NIM PIN" value="4 DIGITS" timer={`${time.toFixed(1)}s`}/><div className="pin-display">{input.padEnd(4,"•")}</div><div className="keypad">{["1","2","3","4","5","6","7","8","9","0"].map(k=><button key={k} onClick={()=>key(k)}>{k}</button>)}</div><p className="hint">Generated challenge. No real wallet PIN is requested.</p></div>
 }
 
-function Sequence({onFinish}:{onFinish:(r:Result)=>void}) {
-  const chars="QWERASD"; const [seq]=useState(()=>Array.from({length:12},()=>chars[rand(chars.length)])); const [input,setInput]=useState(""); const [time,setTime]=useState(7); const [done,setDone]=useState(false);
-  useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);return 0}return x-.1}),100);return()=>clearInterval(t)},[done]);
-  function press(c:string){if(done)return;const next=input+c; if(seq.slice(0,next.length).join("")!==next){setDone(true);onFinish({score:0,xp:15});return}setInput(next);if(next===seq.join("")){const score=Math.round(time*1000);setDone(true);onFinish({score,xp:180,time:7-time})}}
+function Sequence({seed,onEvent,onFinish}:{seed?:string;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
+  const chars="QWERASD"; const initialPuzzle = seed ? createPuzzle("sequence", seed) : null; const [seq]=useState<string[]>(()=>initialPuzzle?.gameId === "sequence" ? initialPuzzle.sequence : Array.from({length:12},()=>chars[rand(chars.length)])); const [input,setInput]=useState(""); const [time,setTime]=useState(7); const [done,setDone]=useState(false);
+  useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:0,xp:15});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,onFinish]);
+  function press(c:string){if(done)return;const next=input+c;onEvent({type:"key",value:c}); if(seq.slice(0,next.length).join("")!==next){setDone(true);onFinish({score:0,xp:15});return}setInput(next);if(next===seq.join("")){const score=Math.round(time*1000);setDone(true);onFinish({score,xp:180,time:7-time})}}
   if(done)return <ResultBox result={{score:input===seq.join("")?Math.round(time*1000):0,xp:input===seq.join("")?180:15}} onRestart={()=>location.reload()}/>;
   return <div className="challenge"><GameHUD label="KEY SEQUENCE" value={`${input.length}/${seq.length}`} timer={`${time.toFixed(2)}s`}/><div className="sequence">{seq.map((c,i)=><span className={i<input.length?"seen":""} key={i}>{c}</span>)}</div><div className="key-row">{chars.split("").map(c=><button key={c} onClick={()=>press(c)}>{c}</button>)}</div></div>
 }
 
-function Memory({onFinish}:{onFinish:(r:Result)=>void}) {
-  const [code]=useState(()=>Array.from({length:6},()=>["NQ","7F","3A","C2","91","D8"][rand(6)])); const [show,setShow]=useState(true); const [input,setInput]=useState<string[]>([]); const [done,setDone]=useState(false);
+function Memory({seed,onEvent,onFinish}:{seed?:string;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
+  const initialPuzzle = seed ? createPuzzle("memory", seed) : null; const [code]=useState<string[]>(()=>initialPuzzle?.gameId === "memory" ? initialPuzzle.tokens : Array.from({length:6},()=>["NQ","7F","3A","C2","91","D8"][rand(6)])); const [show,setShow]=useState(true); const [input,setInput]=useState<string[]>([]); const [done,setDone]=useState(false);
   useEffect(()=>{const t=setTimeout(()=>setShow(false),2500);return()=>clearTimeout(t)},[]);
   const options=useMemo(()=>shuffle([...code,...Array.from({length:6},()=>["AA","1B","EF","42","09","BC"][rand(6)])]),[code]);
-  function pick(x:string){if(done)return;const next=[...input,x];setInput(next);if(next.length===code.length){const ok=next.every((v,i)=>v===code[i]);setDone(true);onFinish({score:ok?600:0,xp:ok?160:20})}}
+  function pick(x:string){if(done)return;const next=[...input,x];onEvent({type:"choice",value:x});setInput(next);if(next.length===code.length){const ok=next.every((v,i)=>v===code[i]);setDone(true);onFinish({score:ok?600:0,xp:ok?160:20})}}
   if(done)return <ResultBox result={{score:input.every((v,i)=>v===code[i])?600:0,xp:input.every((v,i)=>v===code[i])?160:20}} onRestart={()=>location.reload()}/>;
   return <div className="challenge narrow"><GameHUD label="ADDRESS MEMORY" value={show?"MEMORIZE":"REBUILD"} timer={show?"2.5s":"∞"}/><div className="memory-code">{show?code.map(x=><b key={x}>{x}</b>):input.map(x=><b key={Math.random()}>{x}</b>)}</div>{!show&&<div className="memory-options">{options.map((x,i)=><button key={i} onClick={()=>pick(x)}>{x}</button>)}</div>}</div>
 }

@@ -1,0 +1,34 @@
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8787";
+
+export type RunMode = "daily" | "ranked" | "practice";
+export type Run = { runId: string; seed: string; gameId: string; mode: RunMode; expiresAt: string };
+
+export async function requestNonce() {
+  const response = await fetch(`${API_URL}/auth/nonce`, { method: "POST", credentials: "include" });
+  if (!response.ok) throw new Error("Could not start wallet login");
+  return await response.json() as { nonce: string; exp: number; message: string };
+}
+
+export async function verifyLogin(payload: { message: string; signer: string; signerPublicKey: string; signature: string }) {
+  const response = await fetch(`${API_URL}/auth/verify`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  if (!response.ok) throw new Error((await response.json()).error || "Wallet login was rejected");
+  return await response.json() as { address: string };
+}
+
+export async function startRun(gameId: string, mode: RunMode) {
+  const response = await fetch(`${API_URL}/runs/start`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gameId, mode }) });
+  if (!response.ok) throw new Error((await response.json()).error || "Could not start ranked run");
+  return await response.json() as Run;
+}
+
+export async function submitRun(runId: string, events: unknown[]) {
+  const response = await fetch(`${API_URL}/runs/${runId}/submit`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ events }) });
+  if (!response.ok) throw new Error((await response.json()).error || "Run was rejected");
+  return await response.json() as { score: number; xp: number; rank: number | null; best: number; ranked?: boolean };
+}
+
+export async function getLeaderboard(gameId: string, period: "daily" | "all" = "all") {
+  const response = await fetch(`${API_URL}/leaderboard?game=${encodeURIComponent(gameId)}&period=${period}`, { credentials: "include" });
+  if (!response.ok) throw new Error("Could not load leaderboard");
+  return await response.json() as Array<{ address: string; score: number; created_at: string }>;
+}

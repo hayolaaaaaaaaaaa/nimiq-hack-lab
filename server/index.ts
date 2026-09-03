@@ -87,6 +87,10 @@ app.post("/runs", async c => {
   db.prepare("INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)").run(id, address, body.gameId, body.mode, body.mode === "daily" ? day : null, seed, iso(started), iso(expires));
   return c.json({ runId: id, seed, gameId: body.gameId, mode: body.mode, expiresAt: iso(expires) });
 });
+app.post("/runs/start", async c => {
+  const url = new URL(c.req.url); url.pathname = "/runs";
+  return app.fetch(new Request(url, c.req.raw));
+});
 app.post("/runs/:id/submit", async c => {
   const address = sessionAddress(c); if (!address) return c.json({ error: "ranked session required" }, 401);
   const run = db.prepare("SELECT * FROM runs WHERE id = ? AND address = ?").get(c.req.param("id"), address) as any;
