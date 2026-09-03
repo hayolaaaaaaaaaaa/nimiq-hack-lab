@@ -184,7 +184,7 @@ function NimPin({onFinish}:{onFinish:(r:Result)=>void}) {
 function Sequence({onFinish}:{onFinish:(r:Result)=>void}) {
   const chars="QWERASD"; const [seq]=useState(()=>Array.from({length:12},()=>chars[rand(chars.length)])); const [input,setInput]=useState(""); const [time,setTime]=useState(7); const [done,setDone]=useState(false);
   useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);return 0}return x-.1}),100);return()=>clearInterval(t)},[done]);
-  function press(c:string){if(done)return;const next=input+c; if(seq.slice(0,next.length)!==next){setDone(true);onFinish({score:0,xp:15});return}setInput(next);if(next===seq.join("")){const score=Math.round(time*1000);setDone(true);onFinish({score,xp:180,time:7-time})}}
+  function press(c:string){if(done)return;const next=input+c; if(seq.slice(0,next.length).join("")!==next){setDone(true);onFinish({score:0,xp:15});return}setInput(next);if(next===seq.join("")){const score=Math.round(time*1000);setDone(true);onFinish({score,xp:180,time:7-time})}}
   if(done)return <ResultBox result={{score:input===seq.join("")?Math.round(time*1000):0,xp:input===seq.join("")?180:15}} onRestart={()=>location.reload()}/>;
   return <div className="challenge"><GameHUD label="KEY SEQUENCE" value={`${input.length}/${seq.length}`} timer={`${time.toFixed(2)}s`}/><div className="sequence">{seq.map((c,i)=><span className={i<input.length?"seen":""} key={i}>{c}</span>)}</div><div className="key-row">{chars.split("").map(c=><button key={c} onClick={()=>press(c)}>{c}</button>)}</div></div>
 }
