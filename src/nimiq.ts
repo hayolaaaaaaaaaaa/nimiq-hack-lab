@@ -35,13 +35,3 @@ export async function connectNimiq(): Promise<string | null> {
   return signer;
 }
 
-/** Sign a score/challenge payload through the same wallet connection. */
-export async function signScore(message: string) {
-  if (isNimiqPay()) {
-    miniProvider ??= await init();
-    return await miniProvider.sign(message);
-  }
-
-  const hub = new HubApi(HUB_URL);
-  return await hub.signMessage({ appName: "Nimiq Hack Lab", message });
-}
