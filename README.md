@@ -150,7 +150,16 @@ The current API uses SQLite for local development. Vercel filesystems are epheme
 
 Run the app locally with `npm run dev` to view the OPERATOR interface. The current design uses a premium navy command-center layout with cyan network interactions, yellow achievement highlights, a featured Daily Operation, verified rankings, and an operator profile.
 
-Brand assets are in `public/brand/`: `operator-logo-primary.svg`, `operator-mark.svg`, and `operator-icon.svg`.
+Brand assets are in `public/brand/`:
+
+- `operator-logo-primary.svg` — primary lockup for the dark interface.
+- `operator-logo-horizontal.svg` — navbar and banner lockup.
+- `operator-mark.svg` — cyan network mark with yellow operator node.
+- `operator-wordmark.svg` — wordmark-only treatment.
+- `operator-dark.svg` — full-color lockup for light backgrounds.
+- `operator-light.svg` — full-color lockup for dark backgrounds.
+- `operator-monochrome.svg` — one-color fallback.
+- `operator-icon.svg` — app and favicon icon.
 
 For a hackathon demo, show this sequence:
 
