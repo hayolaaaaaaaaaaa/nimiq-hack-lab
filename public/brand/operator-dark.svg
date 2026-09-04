@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 128" role="img" aria-label="OPERATOR logo for light backgrounds">
-  <rect width="420" height="128" fill="#F5F7FA"/>
-  <g transform="translate(8 8)"><path d="M56 10 94 32v45L56 99 18 77V32zM56 10v45m0 0 38-23M56 55 18 32" fill="none" stroke="#00C8FF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="m56 55 18-10v24L56 79z" fill="#FFD84A"/><path d="m74 45 16-9m-6-5 10 5-3 10" fill="none" stroke="#FFD84A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>
-  <text x="126" y="63" fill="#080D18" font-family="Space Grotesk, sans-serif" font-size="31" font-weight="700" letter-spacing="4">OPERATOR</text><text x="128" y="88" fill="#8B96A8" font-family="Inter, sans-serif" font-size="11" letter-spacing="2">POWERED BY NIMIQ</text>
-</svg>
