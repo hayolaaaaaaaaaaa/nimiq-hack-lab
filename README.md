@@ -102,6 +102,8 @@ Start the frontend:
 npm run dev
 ```
 
+Set `DATABASE_URL` in `.env` to a Postgres connection string (a free [Neon](https://neon.tech) or [Supabase](https://supabase.com) instance works fine for local dev — no local Postgres install required).
+
 Start the local API in a second terminal:
 
 ```bash
@@ -131,14 +133,13 @@ WEB_ORIGIN=https://your-app.vercel.app
 COOKIE_SAME_SITE=None
 SESSION_SECRET=<long-random-secret>
 DAILY_SECRET=<long-random-secret>
+DATABASE_URL=<postgres-connection-string>
 ```
 
-The current API uses SQLite for local development. Vercel filesystems are ephemeral, so production rankings require migrating the same schema to Postgres before launch. Set `Secure` cookies and use HTTPS for both the frontend and API, especially when the Mini App is hosted inside Nimiq Pay.
+The API stores everything in Postgres (works with Vercel Postgres, Neon, Supabase, or any standard connection string). Set `Secure` cookies and use HTTPS for both the frontend and API, especially when the Mini App is hosted inside Nimiq Pay.
 
 ## Roadmap
 
-- Migrate the API store from SQLite to Postgres.
-- Add real rank and best-score responses to submission results.
 - Publish daily rankings and UTC countdown in the client.
 - Add replay validators for Block Rush, NIM Grid, and Sync.
 - Split each challenge into a testable module.
