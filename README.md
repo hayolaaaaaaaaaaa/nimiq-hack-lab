@@ -1,6 +1,8 @@
-# Nimiq Skill Arcade
+# OPERATOR
 
-An original Nimiq-themed competitive skill arcade.
+Competitive skill challenges, powered by Nimiq.
+
+OPERATOR is a competitive skill platform where players enter fast, verifiable challenges, prove their ability, and climb the rankings, powered by Nimiq.
 
 Guest scores are local practice only. Ranked scores require a connected Nimiq address and a verified server submission; the current static build does not claim unverified scores are ranked.
 
