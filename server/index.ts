@@ -1,16 +1,37 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import Database from "better-sqlite3";
 import { Pool } from "pg";
 import { createHmac, randomBytes } from "node:crypto";
 import { Address, Hash, PublicKey, Signature } from "@nimiq/core";
 import { createPuzzle, dailyGame, replay, type GameEvent, type RankedGameId } from "../packages/game-core/index.js";
 
 const app = new Hono();
-const db = new Pool({
+const pgDb = process.env.DATABASE_URL ? new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL?.includes("localhost") ? false : { rejectUnauthorized: false },
-});
+}) : null;
+const sqliteDb = pgDb ? null : new Database(process.env.DATABASE_FILE || "arcade.sqlite");
+const db = {
+  async query(sql: string, params: unknown[] = []) {
+    if (pgDb) return pgDb.query(sql, params);
+    if (!sqliteDb) throw new Error("Database is not configured");
+    const sqliteSql = sql.replace(/\$\d+/g, "?");
+    const lower = sql.trim().toLowerCase();
+    if (lower.startsWith("create ") || lower.startsWith("drop ") || lower.startsWith("alter ") || lower.startsWith("delete ")) {
+      sqliteDb.exec(sqliteSql);
+      return { rows: [], rowCount: 0 } as { rows: any[]; rowCount?: number };
+    }
+    if (lower.startsWith("select")) {
+      const stmt = sqliteDb.prepare(sqliteSql);
+      return { rows: stmt.all(...params) as any[] } as { rows: any[]; rowCount?: number };
+    }
+    const stmt = sqliteDb.prepare(sqliteSql);
+    const result = stmt.run(...params);
+    return { rows: [], rowCount: Number(result.changes ?? 0) } as { rows: any[]; rowCount?: number };
+  },
+};
 const sessionSecret = process.env.SESSION_SECRET || "development-only-change-me";
 const dailySecret = process.env.DAILY_SECRET || "development-daily-secret";
 const rankedGames = new Set<RankedGameId>(["nim-pin", "sequence", "memory", "nim-lock", "vault", "node-breach"]);
@@ -119,7 +140,7 @@ app.post("/runs/:id/submit", async c => {
   }
 
   const claimed = await db.query("UPDATE runs SET consumed_at = $1 WHERE id = $2 AND consumed_at IS NULL", [iso(now()), run.id]);
-  if (!claimed.rowCount) return c.json({ error: "run already submitted" }, 409);
+  if ((claimed.rowCount ?? 0) === 0) return c.json({ error: "run already submitted" }, 409);
 
   const events = body.events || []; const duration = events.length ? events[events.length - 1].t : 0;
   const serverDuration = now() - Date.parse(run.started_at);

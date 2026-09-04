@@ -102,7 +102,7 @@ Start the frontend:
 npm run dev
 ```
 
-Set `DATABASE_URL` in `.env` to a Postgres connection string (a free [Neon](https://neon.tech) or [Supabase](https://supabase.com) instance works fine for local dev — no local Postgres install required).
+Set `DATABASE_URL` in `.env` to a Postgres connection string for a durable app, or leave `DATABASE_FILE` in place for the local SQLite fallback. The app will automatically use Postgres when `DATABASE_URL` exists and falls back to SQLite otherwise.
 
 Start the local API in a second terminal:
 
@@ -134,9 +134,10 @@ COOKIE_SAME_SITE=None
 SESSION_SECRET=<long-random-secret>
 DAILY_SECRET=<long-random-secret>
 DATABASE_URL=<postgres-connection-string>
+DATABASE_FILE=/tmp/arcade.sqlite
 ```
 
-The API stores everything in Postgres (works with Vercel Postgres, Neon, Supabase, or any standard connection string). Set `Secure` cookies and use HTTPS for both the frontend and API, especially when the Mini App is hosted inside Nimiq Pay.
+The app prefers Postgres when `DATABASE_URL` is configured, but it also falls back to SQLite when it is not. This keeps Vercel and local demos working while a proper Postgres store is added. Set `Secure` cookies and use HTTPS for both the frontend and API, especially when the Mini App is hosted inside Nimiq Pay.
 
 ## Roadmap
 
