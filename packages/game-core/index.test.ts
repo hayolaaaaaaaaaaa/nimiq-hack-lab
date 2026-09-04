@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createPuzzle, replay } from "./index.js";
+import { createPuzzle, dailyGame, replay } from "./index.js";
 
 test("same seed creates the same puzzle", () => {
   assert.deepEqual(createPuzzle("sequence", "abc"), createPuzzle("sequence", "abc"));
   assert.notDeepEqual(createPuzzle("nim-pin", "abc"), createPuzzle("nim-pin", "def"));
+});
+
+test("daily rotation always selects a ranked challenge", () => {
+  const ranked = new Set(["nim-pin", "sequence", "memory", "nim-lock", "vault", "node-breach"]);
+  for (const day of ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"]) assert.equal(ranked.has(dailyGame(day)), true);
 });
 
 test("replay accepts a valid sequence and computes its own score", () => {

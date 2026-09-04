@@ -89,7 +89,7 @@ export function replay(gameId: RankedGameId, seed: string, events: GameEvent[]):
 }
 
 export function dailyGame(day: string): RankedGameId {
-  const rotation: RankedGameId[] = ["nim-pin", "sequence", "memory"];
+  const rotation: RankedGameId[] = ["nim-pin", "sequence", "memory", "nim-lock", "vault", "node-breach"];
   let value = 0;
   for (const character of day) value = (value * 31 + character.charCodeAt(0)) >>> 0;
   return rotation[value % rotation.length];

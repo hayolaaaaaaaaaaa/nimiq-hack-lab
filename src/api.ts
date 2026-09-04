@@ -2,6 +2,13 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8787";
 
 export type RunMode = "daily" | "ranked" | "practice";
 export type Run = { runId: string; seed: string; gameId: string; mode: RunMode; expiresAt: string };
+export type DailyOperation = { day: string; gameId: string; startsAt: string; endsAt: string };
+
+export async function getDaily() {
+  const response = await fetch(`${API_URL}/daily`, { credentials: "include" });
+  if (!response.ok) throw new Error("Could not load daily operation");
+  return await response.json() as DailyOperation;
+}
 
 export async function requestNonce() {
   const response = await fetch(`${API_URL}/auth/nonce`, { method: "POST", credentials: "include" });
