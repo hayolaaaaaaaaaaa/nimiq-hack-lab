@@ -89,6 +89,15 @@ The wallet is used for identity and authentication. It does not sign client-sele
 
 ## Local development
 
+## Project documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Security](docs/SECURITY.md)
+- [Replay protocol](docs/REPLAY-PROTOCOL.md)
+- [Nimiq integration](docs/NIMIQ-INTEGRATION.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [Competition rules](docs/COMPETITION.md)
+
 Install dependencies:
 
 ```bash
