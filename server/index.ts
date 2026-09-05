@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS login_nonces (nonce TEXT PRIMARY KEY, created_at TIME
 CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, address TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL);
 CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, address TEXT NOT NULL, game_id TEXT NOT NULL, mode TEXT NOT NULL, day TEXT, seed TEXT NOT NULL, started_at TIMESTAMPTZ NOT NULL, expires_at TIMESTAMPTZ NOT NULL, consumed_at TIMESTAMPTZ);
 CREATE TABLE IF NOT EXISTS scores (id SERIAL PRIMARY KEY, address TEXT NOT NULL, game_id TEXT NOT NULL, mode TEXT NOT NULL, day TEXT, score INTEGER NOT NULL, xp INTEGER NOT NULL, duration_ms INTEGER NOT NULL, run_id TEXT UNIQUE, created_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS reward_claims (address TEXT NOT NULL, day TEXT NOT NULL, amount_nim INTEGER NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL, PRIMARY KEY (address, day));
 CREATE UNIQUE INDEX IF NOT EXISTS scores_daily_unique ON scores(address, game_id, day) WHERE mode = 'daily';
 `);
 
@@ -114,6 +115,30 @@ app.post("/auth/logout", async c => {
 });
 
 app.get("/daily", c => { const day = new Date().toISOString().slice(0, 10); return c.json({ day, gameId: dailyGame(day), startsAt: `${day}T00:00:00.000Z`, endsAt: `${new Date(Date.parse(`${day}T00:00:00.000Z`) + 86_400_000).toISOString()}`, rewardNim: 5, qualificationScore: 500 }); });
+
+app.get("/daily/status", async c => {
+  const address = await sessionAddress(c);
+  const day = new Date().toISOString().slice(0, 10);
+  const rewardNim = 5;
+  const qualificationScore = 500;
+  if (!address) return c.json({ eligible: false, claimed: false, score: 0, rewardNim, qualificationScore });
+  const scoreRow = (await db.query("SELECT COALESCE(MAX(score), 0) AS score FROM scores WHERE address = $1 AND game_id = $2 AND day = $3 AND mode = 'daily'", [address, dailyGame(day), day])).rows[0];
+  const claim = (await db.query("SELECT status FROM reward_claims WHERE address = $1 AND day = $2", [address, day])).rows[0];
+  const score = Number(scoreRow?.score ?? 0);
+  return c.json({ eligible: score >= qualificationScore && !claim, claimed: Boolean(claim), score, rewardNim, qualificationScore });
+});
+
+app.post("/daily/claim", async c => {
+  const address = await sessionAddress(c);
+  if (!address) return c.json({ error: "ranked session required" }, 401);
+  const day = new Date().toISOString().slice(0, 10);
+  const rewardNim = 5;
+  const qualificationScore = 500;
+  const scoreRow = (await db.query("SELECT COALESCE(MAX(score), 0) AS score FROM scores WHERE address = $1 AND game_id = $2 AND day = $3 AND mode = 'daily'", [address, dailyGame(day), day])).rows[0];
+  if (Number(scoreRow?.score ?? 0) < qualificationScore) return c.json({ error: "daily qualification not reached" }, 403);
+  await db.query("INSERT INTO reward_claims(address, day, amount_nim, status, created_at) VALUES ($1, $2, $3, 'pending', $4) ON CONFLICT (address, day) DO NOTHING", [address, day, rewardNim, iso(now())]);
+  return c.json({ status: "pending", rewardNim });
+});
 
 app.post("/runs", async c => {
   const address = await sessionAddress(c); if (!address) return c.json({ error: "ranked session required" }, 401);
