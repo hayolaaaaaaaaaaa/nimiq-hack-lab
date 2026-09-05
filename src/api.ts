@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8787";
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:8787");
 
 export type RunMode = "daily" | "ranked" | "practice";
 export type Run = { runId: string; seed: string; gameId: string; mode: RunMode; expiresAt: string };
