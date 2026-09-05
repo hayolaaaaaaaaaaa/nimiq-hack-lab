@@ -135,9 +135,10 @@ function BlockRush({ranked,rankedSubmission,onEvent,onFinish}:{ranked:boolean;ra
 
 function NimGrid({onFinish}:{onFinish:(r:Result)=>void}) {
   const [active,setActive]=useState(rand(16)); const [hits,setHits]=useState(0); const [time,setTime]=useState(15); const [done,setDone]=useState(false);
-  useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:hits*100,xp:100,time:15});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,hits,onFinish]);
-  if(done)return <ResultBox result={{score:hits*100,xp:100}} onRestart={()=>{setHits(0);setTime(15);setActive(rand(16));setDone(false)}}/>;
-  return <div className="challenge"><GameHUD label="NIM GRID" value={`${hits} HITS`} timer={`${time.toFixed(1)}s`}/><div className="nim-grid">{Array.from({length:16},(_,i)=><button key={i} className={i===active?"node active":"node"} onClick={()=>{if(i===active){setHits(h=>h+1);setActive(rand(16))}else{setDone(true);onFinish({score:hits*100,xp:100,time:15-time})}}}><span/></button>)}</div><p className="hint">Hit the glowing node. One wrong box ends the challenge.</p></div>
+  const xpForHits = hits * 20;
+  useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:hits*100,xp:xpForHits,time:15});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,hits,onFinish,xpForHits]);
+  if(done)return <ResultBox result={{score:hits*100,xp:xpForHits}} onRestart={()=>{setHits(0);setTime(15);setActive(rand(16));setDone(false)}}/>;
+  return <div className="challenge"><GameHUD label="NIM GRID" value={`${hits} HITS`} timer={`${time.toFixed(1)}s`}/><div className="nim-grid">{Array.from({length:16},(_,i)=><button key={i} className={i===active?"node active":"node"} onClick={()=>{if(i===active){setHits(h=>h+1);setActive(rand(16))}else{setDone(true);onFinish({score:hits*100,xp:xpForHits,time:15-time})}}}><span/></button>)}</div><p className="hint">Hit the glowing node. One wrong box ends the challenge.</p></div>
 }
 
 function NimPin({seed,rankedSubmission,onEvent,onFinish}:{seed?:string;rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
