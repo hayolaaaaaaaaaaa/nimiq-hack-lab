@@ -100,6 +100,7 @@ Connected operators can create a non-monetary challenge token for a ranked game.
 - [Replay protocol](docs/REPLAY-PROTOCOL.md)
 - [Nimiq integration](docs/NIMIQ-INTEGRATION.md)
 - [Analytics](docs/ANALYTICS.md)
+- [30-second demo](docs/DEMO.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [Competition rules](docs/COMPETITION.md)
 

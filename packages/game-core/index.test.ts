@@ -56,3 +56,24 @@ test("replay validates ranked block rush and sync events", () => {
   })));
   assert.deepEqual(sync, { score: 500, xp: 150, valid: true });
 });
+
+test("replay rejects malformed and incomplete ranked events", () => {
+  assert.equal(replay("block-rush", "seed", [{ t: 100, type: "choice", value: "2" }]).valid, false);
+  assert.equal(replay("block-rush", "seed", [{ t: 100, type: "key", value: "3" }]).valid, false);
+  assert.equal(replay("sync", "seed", Array.from({ length: 4 }, (_, index) => ({
+    t: (index + 1) * 100,
+    type: "choice" as const,
+    value: "hit",
+  }))).valid, false);
+  assert.equal(replay("nim-pin", "seed", [
+    { t: 200, type: "key", value: "0000" },
+    { t: 100, type: "key", value: "0000" },
+  ]).reason, "invalid event timing");
+});
+
+test("replay rejects events that arrive too quickly", () => {
+  const puzzle = createPuzzle("memory", "seed");
+  if (puzzle.gameId !== "memory") return;
+  const events = puzzle.tokens.map(value => ({ t: 100, type: "choice" as const, value }));
+  assert.equal(replay("memory", "seed", events).reason, "events too fast");
+});
