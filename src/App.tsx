@@ -73,7 +73,7 @@ function App() {
     <section className="hero-editorial"><div className="hero-copy"><div className="kicker"><span/>SEASON 01 · COMPETITIVE SKILL CHALLENGES</div><h1>PROVE<br/><em>YOUR SKILL.</em></h1><p>Fast, verifiable challenges powered by Nimiq. Enter a run, prove your ability, and climb the rankings.</p><div className="hero-actions"><button className="gold-btn" onClick={()=>launchGame(wallet?"nim-pin":"nim-grid")}>{wallet?"ENTER RANKED RUN":"ENTER CHALLENGES"} <b>↗</b></button><a className="text-btn" href={wallet?"#feature":"#leaderboard"}>{wallet?"PLAY DAILY ↓":"VIEW RANKINGS ↓"}</a></div></div><div className="hero-emblem"><div className="orbit a"/><div className="orbit b"/><div className="core"><img src="/logo/operator-mark.svg" alt="OPERATOR"/></div><small>01 / 09</small></div></section>
     <section className="season-strip"><div><small>SEASON</small><b>01</b></div><div><small>OPERATORS</small><b>—</b></div><div><small>RANKED RUNS</small><b>—</b></div><div><small>STATUS</small><b className="live">● ONLINE</b></div></section>
     <section id="feature" className="feature-section"><div className="section-label">01 <span>DAILY OPERATION</span></div><div className="feature-card"><div><div className="feature-icon"><img src="/logo/operator-mark.svg" alt="OPERATOR"/></div><small>TODAY'S CHALLENGE</small><h2>{dailyOperation ? games.find(game => game.id === dailyOperation.gameId)?.name.toUpperCase() : "LOADING"}</h2><p>{wallet ? "One verified attempt. Your score is replayed and ranked by the server." : "Connect your Nimiq wallet to enter today's verified operation. Practice remains available locally."}</p></div><div className="feature-side"><div><small>MODE</small><strong>{wallet ? "RANKED" : "CONNECT"}</strong></div><div><small>ATTEMPTS</small><strong>ONE</strong></div><button className="gold-btn compact" disabled={!dailyOperation} onClick={()=>wallet && dailyOperation ? launchGame(dailyOperation.gameId as GameId, "daily") : connect()}>{wallet ? "START OPERATION" : "CONNECT TO PLAY"} ↗</button></div></div></section>
-    <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>CHALLENGES</h2></div><p>SIX RANKED.<br/>THREE PRACTICE.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;const ranked=rankedGames.includes(g.id);return <button className="editorial-game" key={g.id} onClick={()=>launchGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{ranked&&wallet?"RANKED":"PRACTICE"}</small><strong>↗</strong></button>})}</div></section>
+    <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>CHALLENGES</h2></div><p>FIVE RANKED.<br/>THREE PRACTICE.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;const ranked=rankedGames.includes(g.id);return <button className="editorial-game" key={g.id} onClick={()=>launchGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{ranked&&wallet?"RANKED":"PRACTICE"}</small><strong>↗</strong></button>})}</div></section>
     <section id="leaderboard" className="leaderboard-section"><div className="section-heading"><div><span>03</span><h2>RANKINGS</h2></div><p>{games.find(item=>item.id===leaderboardGame)?.name.toUpperCase()}<br/>VERIFIED SCORES</p></div><div className="leaderboard-table">{leaderboard.length ? leaderboard.map((row,index)=><div className="rank-row" key={row.address}><span>{String(index+1).padStart(2,"0")}</span><span>{row.address.slice(0,6)}…{row.address.slice(-3)}</span><b>{row.score.toLocaleString()}</b><i>↗</i></div>) : <div className="leaderboard-empty"><b>{wallet ? "NO VERIFIED SCORES YET" : "CONNECT TO RANK"}</b><span>{wallet ? "Complete a ranked challenge to appear here." : "Guest scores stay on this device and never enter the board."}</span></div>}<div className="your-rank"><span>YOUR BEST</span><b>{wallet ? (verifiedBest || scores[leaderboardGame] || "—") : "GUEST"}</b><strong>{wallet ? "VERIFIED OPERATOR" : "VERIFICATION REQUIRED"}</strong></div></div></section>
     <section id="profile" className="profile-section"><div className="profile-card"><div className="profile-head"><div><span>04</span><small>OPERATOR PROFILE</small></div><div>LVL <b>{level}</b></div></div><div className="profile-main"><div><small>CURRENT XP</small><div className="big-xp">{xp.toLocaleString()}</div><div className="xp-line"><i style={{width:`${levelXp/5}%`}}/></div><small>{500-levelXp} XP TO LEVEL {level+1}</small></div><div className="profile-stats"><div><small>BEST SCORE</small><b>{best||"—"}</b></div><div><small>STREAK</small><b>{dailyDone?"1 DAY":"—"}</b></div><div><small>PLAYER</small><b>{wallet?"NIM":"GUEST"}</b></div></div></div></div></section>
     <footer><span>OPERATOR</span><span>COMPETITIVE SKILL CHALLENGES, POWERED BY NIMIQ</span><span>NO PRIVATE KEYS ARE EVER EXPOSED</span></footer>
@@ -84,14 +84,14 @@ function GameShell({title,onBack,children}:{title:string;onBack:()=>void;childre
 
 function Game({id,run,rankedSubmission,onEvent,onFinish}:{id:GameId;run:Run|null;rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
   switch(id) {
-    case "block-rush": return <BlockRush rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
+    case "block-rush": return <BlockRush ranked={Boolean(run)} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "nim-grid": return <NimGrid onFinish={onFinish}/>;
     case "nim-pin": return <NimPin seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "sequence": return <Sequence seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "memory": return <Memory seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "nim-lock": return <RotatingLock count={4} limit={20000} seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} title="NIM LOCK" onFinish={onFinish}/>;
     case "vault": return <RotatingLock count={5} limit={10000} seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} title="NIM VAULT" onFinish={onFinish}/>;
-    case "sync": return <Sync rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
+    case "sync": return <Sync ranked={Boolean(run)} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
   }
 }
 
@@ -106,7 +106,7 @@ function RankedResult({submission,preview,onRestart}:{submission:RankedSubmissio
   return <div className="result"><div className="result-icon"><Clock3/></div><small>PREVIEW</small><h2>{preview.score.toLocaleString()}</h2><p>Waiting for validation...</p></div>;
 }
 
-function BlockRush({rankedSubmission,onEvent,onFinish}:{rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
+function BlockRush({ranked,rankedSubmission,onEvent,onFinish}:{ranked:boolean;rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
   const colors = ["cyan","lime","violet"];
   const [board,setBoard]=useState(()=>Array.from({length:88},()=>colors[rand(3)]));
   const [score,setScore]=useState(0); const [time,setTime]=useState(30); const [done,setDone]=useState(false);
@@ -121,7 +121,7 @@ function BlockRush({rankedSubmission,onEvent,onFinish}:{rankedSubmission:RankedS
     setBoard(next); setScore(s=>s+seen.size*seen.size*10);
     if(!a.length){setDone(true);onFinish({score:score+seen.size*seen.size*10,xp:150,time:30-time})}
   }
-  if(done){const preview={score,xp:150};return <RankedResult submission={rankedSubmission} preview={preview} onRestart={()=>{setBoard(Array.from({length:88},()=>colors[rand(3)]));setScore(0);setTime(30);setDone(false)}}/>}
+  if(done){const preview={score,xp:150};return ranked?<RankedResult submission={rankedSubmission} preview={preview} onRestart={()=>{setBoard(Array.from({length:88},()=>colors[rand(3)]));setScore(0);setTime(30);setDone(false)}}/>:<ResultBox result={preview} onRestart={()=>{setBoard(Array.from({length:88},()=>colors[rand(3)]));setScore(0);setTime(30);setDone(false)}}/>}
   return <div className="challenge"><GameHUD label="BLOCK RUSH" value={String(score)} timer={`${time}s`}/><div className="block-board">{board.map((c,i)=><button key={i} className={`block ${c||"empty"}`} onClick={()=>click(i)}/>)}</div><p className="hint">Clear groups of 3+ matching nodes. Bigger groups = bigger score.</p></div>
 }
 
@@ -136,7 +136,7 @@ function NimPin({seed,rankedSubmission,onEvent,onFinish}:{seed?:string;rankedSub
   const initialPin = seed ? createPuzzle("nim-pin", seed) : null; const [pin,setPin]=useState(()=>initialPin?.gameId === "nim-pin" ? initialPin.pin : String(rand(9000)+1000)); const [input,setInput]=useState(""); const [time,setTime]=useState(12); const [done,setDone]=useState(false);
   useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:0,xp:25});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,onFinish]);
   function key(k:string){if(done)return; const n=input+k;if(n.length<=4)setInput(n); if(n.length===4){onEvent({type:"key",value:n});if(n===pin){const score=Math.max(100,Math.round(time*100));setDone(true);onFinish({score,xp:125,time:12-time})}else{setDone(true);onFinish({score:0,xp:25})}}}
-  if(done)return <RankedResult submission={rankedSubmission} preview={{score:input===pin?Math.max(100,Math.round(time*100)):0,xp:input===pin?125:25}} onRestart={()=>{setPin(String(rand(9000)+1000));setInput("");setTime(12);setDone(false)}}/>;
+  if(done){const preview={score:input===pin?Math.max(100,Math.round(time*100)):0,xp:input===pin?125:25};return seed?<RankedResult submission={rankedSubmission} preview={preview} onRestart={()=>{setPin(String(rand(9000)+1000));setInput("");setTime(12);setDone(false)}}/>:<ResultBox result={preview} onRestart={()=>{setPin(String(rand(9000)+1000));setInput("");setTime(12);setDone(false)}}/>}
   return <div className="challenge narrow"><GameHUD label="NIM PIN" value="4 DIGITS" timer={`${time.toFixed(1)}s`}/><div className="pin-display">{input.padEnd(4,"•")}</div><div className="keypad">{["1","2","3","4","5","6","7","8","9","0"].map(k=><button key={k} onClick={()=>key(k)}>{k}</button>)}</div><p className="hint">Generated challenge. No real wallet PIN is requested.</p></div>
 }
 
@@ -144,7 +144,7 @@ function Sequence({seed,rankedSubmission,onEvent,onFinish}:{seed?:string;rankedS
   const chars="QWERASD"; const initialPuzzle = seed ? createPuzzle("sequence", seed) : null; const [seq]=useState<string[]>(()=>initialPuzzle?.gameId === "sequence" ? initialPuzzle.sequence : Array.from({length:12},()=>chars[rand(chars.length)])); const [input,setInput]=useState(""); const [time,setTime]=useState(7); const [done,setDone]=useState(false);
   useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:0,xp:15});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,onFinish]);
   function press(c:string){if(done)return;const next=input+c;onEvent({type:"key",value:c}); if(seq.slice(0,next.length).join("")!==next){setDone(true);onFinish({score:0,xp:15});return}setInput(next);if(next===seq.join("")){const score=Math.round(time*1000);setDone(true);onFinish({score,xp:180,time:7-time})}}
-  if(done)return <RankedResult submission={rankedSubmission} preview={{score:input===seq.join("")?Math.round(time*1000):0,xp:input===seq.join("")?180:15}} onRestart={()=>location.reload()}/>;
+  if(done){const preview={score:input===seq.join("")?Math.round(time*1000):0,xp:input===seq.join("")?180:15};return seed?<RankedResult submission={rankedSubmission} preview={preview} onRestart={()=>location.reload()}/>:<ResultBox result={preview} onRestart={()=>location.reload()}/>}
   return <div className="challenge"><GameHUD label="KEY SEQUENCE" value={`${input.length}/${seq.length}`} timer={`${time.toFixed(2)}s`}/><div className="sequence">{seq.map((c,i)=><span className={i<input.length?"seen":""} key={i}>{c}</span>)}</div><div className="key-row">{chars.split("").map(c=><button key={c} onClick={()=>press(c)}>{c}</button>)}</div></div>
 }
 
@@ -153,7 +153,7 @@ function Memory({seed,rankedSubmission,onEvent,onFinish}:{seed?:string;rankedSub
   useEffect(()=>{const t=setTimeout(()=>setShow(false),2500);return()=>clearTimeout(t)},[]);
   const options=useMemo(()=>shuffle([...code,...Array.from({length:6},()=>["AA","1B","EF","42","09","BC"][rand(6)])]),[code]);
   function pick(x:string){if(done)return;const next=[...input,x];onEvent({type:"choice",value:x});setInput(next);if(next.length===code.length){const ok=next.every((v,i)=>v===code[i]);setDone(true);onFinish({score:ok?600:0,xp:ok?160:20})}}
-  if(done)return <RankedResult submission={rankedSubmission} preview={{score:input.every((v,i)=>v===code[i])?600:0,xp:input.every((v,i)=>v===code[i])?160:20}} onRestart={()=>location.reload()}/>;
+  if(done){const preview={score:input.every((v,i)=>v===code[i])?600:0,xp:input.every((v,i)=>v===code[i])?160:20};return seed?<RankedResult submission={rankedSubmission} preview={preview} onRestart={()=>location.reload()}/>:<ResultBox result={preview} onRestart={()=>location.reload()}/>}
   return <div className="challenge narrow"><GameHUD label="ADDRESS MEMORY" value={show?"MEMORIZE":"REBUILD"} timer={show?"2.5s":"∞"}/><div className="memory-code">{show?code.map(x=><b key={x}>{x}</b>):input.map(x=><b key={Math.random()}>{x}</b>)}</div>{!show&&<div className="memory-options">{options.map((x,i)=><button key={i} onClick={()=>pick(x)}>{x}</button>)}</div>}</div>
 }
 
@@ -170,7 +170,7 @@ function Sync({rankedSubmission,onEvent,onFinish}:{rankedSubmission:RankedSubmis
   const [pos,setPos]=useState(0); const [dir,setDir]=useState(1); const [tries,setTries]=useState(3); const [done,setDone]=useState(false); const [score,setScore]=useState(0);
   useEffect(()=>{if(done)return;const t=setInterval(()=>setPos(p=>{let n=p+dir*2;if(n>=100){setDir(-1);n=100}if(n<=0){setDir(1);n=0}return n}),30);return()=>clearInterval(t)},[dir,done]);
   function hit(){if(pos>42&&pos<58){onEvent({type:"choice",value:"hit"});const s=score+100;setScore(s);if(s>=500){setDone(true);onFinish({score:s,xp:150})}}else{onEvent({type:"choice",value:"miss"});const t=tries-1;setTries(t);if(t<=0){setDone(true);onFinish({score,xp:20})}}}
-  if(done)return <RankedResult submission={rankedSubmission} preview={{score,xp:score>=500?150:20}} onRestart={()=>location.reload()}/>;
+  if(done)return ranked?<RankedResult submission={rankedSubmission} preview={{score,xp:score>=500?150:20}} onRestart={()=>location.reload()}/>:<ResultBox result={{score,xp:score>=500?150:20}} onRestart={()=>location.reload()}/>;
   return <div className="challenge"><GameHUD label="SYNC" value={`${score} PTS`} timer={`${tries} attempts`}/><div className="sync-track"><div className="sync-target"/><div className="sync-cursor" style={{left:`${pos}%`}}/></div><button className="primary huge" onClick={hit}>SYNC PACKET</button></div>
 }
 
