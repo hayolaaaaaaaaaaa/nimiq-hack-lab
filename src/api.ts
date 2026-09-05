@@ -2,7 +2,7 @@ const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" :
 
 export type RunMode = "daily" | "ranked" | "practice";
 export type Run = { runId: string; seed: string; gameId: string; mode: RunMode; expiresAt: string };
-export type DailyOperation = { day: string; gameId: string; startsAt: string; endsAt: string };
+export type DailyOperation = { day: string; gameId: string; startsAt: string; endsAt: string; rewardNim: number; qualificationScore: number };
 
 export async function getDaily() {
   const response = await fetch(`${API_URL}/daily`, { credentials: "include" });

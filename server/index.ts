@@ -113,7 +113,7 @@ app.post("/auth/logout", async c => {
   return c.json({ ok: true });
 });
 
-app.get("/daily", c => { const day = new Date().toISOString().slice(0, 10); return c.json({ day, gameId: dailyGame(day), startsAt: `${day}T00:00:00.000Z`, endsAt: `${new Date(Date.parse(`${day}T00:00:00.000Z`) + 86_400_000).toISOString()}` }); });
+app.get("/daily", c => { const day = new Date().toISOString().slice(0, 10); return c.json({ day, gameId: dailyGame(day), startsAt: `${day}T00:00:00.000Z`, endsAt: `${new Date(Date.parse(`${day}T00:00:00.000Z`) + 86_400_000).toISOString()}`, rewardNim: 5, qualificationScore: 500 }); });
 
 app.post("/runs", async c => {
   const address = await sessionAddress(c); if (!address) return c.json({ error: "ranked session required" }, 401);
