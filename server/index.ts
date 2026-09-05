@@ -225,8 +225,12 @@ app.get("/leaderboard", async c => {
 app.get("/me", async c => {
   const address = await sessionAddress(c);
   if (!address) return c.json({ address: null, xp: 0, streak: 0 });
-  const { rows } = await db.query("SELECT COALESCE(SUM(xp), 0) AS xp FROM scores WHERE address = $1 AND mode IN ('daily','ranked')", [address]);
-  return c.json({ address, xp: Number(rows[0].xp), streak: 0 });
+  const { rows } = await db.query("SELECT COALESCE(SUM(xp), 0) AS xp, COUNT(*) AS verified_runs, COALESCE(AVG(score), 0) AS average_score FROM scores WHERE address = $1 AND mode IN ('daily','ranked')", [address]);
+  const xp = Number(rows[0].xp);
+  const verifiedRuns = Number(rows[0].verified_runs);
+  const rating = Math.min(3000, 1000 + Math.round(Number(rows[0].average_score) / 10) + verifiedRuns * 5);
+  const grade = rating >= 2400 ? "DIAMOND" : rating >= 1900 ? "PLATINUM" : rating >= 1500 ? "GOLD" : rating >= 1200 ? "SILVER" : "BRONZE";
+  return c.json({ address, xp, streak: 0, rating, grade, verifiedRuns });
 });
 
 if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) serve({ fetch: app.fetch, port: Number(process.env.PORT || 8787) });

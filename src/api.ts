@@ -61,5 +61,5 @@ export async function getLeaderboard(gameId: string, period: "daily" | "all" = "
 export async function getMe() {
   const response = await fetch(`${API_URL}/me`, { credentials: "include" });
   if (!response.ok) throw new Error("Could not load operator profile");
-  return await response.json() as { address: string | null; xp: number; streak: number };
+  return await response.json() as { address: string | null; xp: number; streak: number; rating: number; grade: string; verifiedRuns: number };
 }
