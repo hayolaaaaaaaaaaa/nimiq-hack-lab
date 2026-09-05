@@ -5,7 +5,7 @@ import {
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
 import { connectNimiq, isNimiqPay } from "./nimiq";
-import { getDaily, getLeaderboard, getMe, startRun, submitRun, type DailyOperation, type Run } from "./api";
+import { getDaily, getLeaderboard, getMe, logoutSession, startRun, submitRun, type DailyOperation, type Run } from "./api";
 import type { GameEvent } from "../packages/game-core/index";
 import { createPuzzle } from "../packages/game-core/index";
 
@@ -55,6 +55,14 @@ function App() {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
   }
+  async function signOut(){
+    try { await logoutSession(); } catch {}
+    setWallet(null);
+    setActiveRun(null);
+    setRankedSubmission({state:"idle"});
+    setVerifiedBest(0);
+    setWalletError(null);
+  }
   const rankedGames = ["block-rush", "nim-pin", "memory", "vault", "sync"];
   async function launchGame(id: GameId, mode: "ranked" | "daily" = "ranked") {
     setActiveRun(null);
@@ -68,7 +76,7 @@ function App() {
   async function finish(id:GameId,r:Result){if(activeRun){setRankedSubmission({state:"submitting"});try{const result=await submitRun(activeRun.runId,eventsRef.current);setRankedSubmission({state:"verified",score:result.score,xp:result.xp});setLeaderboardGame(id);setVerifiedBest(result.best);setScores(x=>({...x,[id]:Math.max(x[id]||0,result.best)}));setXp(x=>x+result.xp);if(activeRun.mode==="daily"){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}}catch(error){setRankedSubmission({state:"rejected",error:error instanceof Error?error.message:"Run was not accepted"})}return}setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp)}
   if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>{setGame(null);setActiveRun(null)}}><Game id={game} run={activeRun} rankedSubmission={rankedSubmission} onEvent={event=>eventsRef.current.push({...event,t:Math.round(performance.now()-runStartedAt.current)})} onFinish={r=>finish(game,r)}/></GameShell>;
   return <main className="site">
-    <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><img className="brand-logo" src="/logo/operator-mark.svg" alt=""/><span className="wordmark-main">OPERATOR</span><span className="wordmark-sub">BY NIMIQ</span></button><nav className="nav-links"><a href="#lab">Challenges</a><a href="#leaderboard">Rankings</a><a href="#profile">Profile</a></nav><button className="connect" onClick={connect}><i/>{wallet?`${wallet.slice(0,6)}…${wallet.slice(-4)}`:(isNimiqPay()?"Connect Nimiq Pay":"Connect NIM")}</button></header>
+    <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><img className="brand-logo" src="/logo/operator-mark.svg" alt=""/><span className="wordmark-main">OPERATOR</span><span className="wordmark-sub">BY NIMIQ</span></button><nav className="nav-links"><a href="#lab">Challenges</a><a href="#leaderboard">Rankings</a><a href="#profile">Profile</a></nav>{wallet?<button className="connect" onClick={signOut}><i/>SIGN OUT</button>:<button className="connect" onClick={connect}><i/>{isNimiqPay()?"Connect Nimiq Pay":"Connect NIM"}</button>}</header>
     <section className="wallet-status">{wallet ? <><span className="wallet-live">● VERIFIED SESSION</span><span>{wallet}</span></> : walletError ? <><span className="wallet-error">WALLET CONNECTION FAILED</span><span>{walletError}</span></> : <><span>WALLET</span><span>{isNimiqPay()?"Nimiq Pay detected — ready to verify":"Connect with Nimiq Hub to play ranked"}</span></>}</section>
     <section className="hero-editorial"><div className="hero-copy"><div className="kicker"><span/>SEASON 01 · COMPETITIVE SKILL CHALLENGES</div><h1>PROVE<br/><em>YOUR SKILL.</em></h1><p>Fast, verifiable challenges powered by Nimiq. Enter a run, prove your ability, and climb the rankings.</p><div className="hero-actions"><button className="gold-btn" onClick={()=>launchGame(wallet?"nim-pin":"nim-grid")}>{wallet?"ENTER RANKED RUN":"ENTER CHALLENGES"} <b>↗</b></button><a className="text-btn" href={wallet?"#feature":"#leaderboard"}>{wallet?"PLAY DAILY ↓":"VIEW RANKINGS ↓"}</a></div></div><div className="hero-emblem"><div className="orbit a"/><div className="orbit b"/><div className="core"><img src="/logo/operator-mark.svg" alt="OPERATOR"/></div><small>01 / 09</small></div></section>
     <section className="season-strip"><div><small>SEASON</small><b>01</b></div><div><small>OPERATORS</small><b>—</b></div><div><small>RANKED RUNS</small><b>—</b></div><div><small>STATUS</small><b className="live">● ONLINE</b></div></section>

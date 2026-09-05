@@ -105,6 +105,14 @@ app.post("/auth/verify", async c => {
   return c.json({ address });
 });
 
+app.post("/auth/logout", async c => {
+  const raw = c.req.header("Cookie")?.match(/arcade_session=([^;]+)/)?.[1];
+  const id = raw?.split(".")[0];
+  if (id) await db.query("DELETE FROM sessions WHERE id = $1", [id]);
+  c.header("Set-Cookie", cookie("arcade_session", "", 0));
+  return c.json({ ok: true });
+});
+
 app.get("/daily", c => { const day = new Date().toISOString().slice(0, 10); return c.json({ day, gameId: dailyGame(day), startsAt: `${day}T00:00:00.000Z`, endsAt: `${new Date(Date.parse(`${day}T00:00:00.000Z`) + 86_400_000).toISOString()}` }); });
 
 app.post("/runs", async c => {

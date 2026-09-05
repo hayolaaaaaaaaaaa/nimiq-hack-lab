@@ -22,6 +22,11 @@ export async function verifyLogin(payload: { message: string; signer: string; si
   return await response.json() as { address: string };
 }
 
+export async function logoutSession() {
+  const response = await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+  if (!response.ok) throw new Error("Could not sign out");
+}
+
 export async function startRun(gameId: string, mode: RunMode) {
   const response = await fetch(`${API_URL}/runs/start`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gameId, mode }) });
   if (!response.ok) throw new Error((await response.json()).error || "Could not start ranked run");
