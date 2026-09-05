@@ -55,7 +55,7 @@ function App() {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
   }
-  const rankedGames = ["nim-pin", "sequence", "memory", "nim-lock", "vault"];
+  const rankedGames = ["block-rush", "nim-pin", "memory", "vault", "sync"];
   async function launchGame(id: GameId, mode: "ranked" | "daily" = "ranked") {
     setActiveRun(null);
     setRankedSubmission({state:"idle"});
@@ -84,14 +84,14 @@ function GameShell({title,onBack,children}:{title:string;onBack:()=>void;childre
 
 function Game({id,run,rankedSubmission,onEvent,onFinish}:{id:GameId;run:Run|null;rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
   switch(id) {
-    case "block-rush": return <BlockRush onFinish={onFinish}/>;
+    case "block-rush": return <BlockRush rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "nim-grid": return <NimGrid onFinish={onFinish}/>;
     case "nim-pin": return <NimPin seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "sequence": return <Sequence seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "memory": return <Memory seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
     case "nim-lock": return <RotatingLock count={4} limit={20000} seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} title="NIM LOCK" onFinish={onFinish}/>;
     case "vault": return <RotatingLock count={5} limit={10000} seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} title="NIM VAULT" onFinish={onFinish}/>;
-    case "sync": return <Sync onFinish={onFinish}/>;
+    case "sync": return <Sync rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
   }
 }
 
@@ -106,7 +106,7 @@ function RankedResult({submission,preview,onRestart}:{submission:RankedSubmissio
   return <div className="result"><div className="result-icon"><Clock3/></div><small>PREVIEW</small><h2>{preview.score.toLocaleString()}</h2><p>Waiting for validation...</p></div>;
 }
 
-function BlockRush({onFinish}:{onFinish:(r:Result)=>void}) {
+function BlockRush({rankedSubmission,onEvent,onFinish}:{rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
   const colors = ["cyan","lime","violet"];
   const [board,setBoard]=useState(()=>Array.from({length:88},()=>colors[rand(3)]));
   const [score,setScore]=useState(0); const [time,setTime]=useState(30); const [done,setDone]=useState(false);
@@ -115,12 +115,13 @@ function BlockRush({onFinish}:{onFinish:(r:Result)=>void}) {
     if(done)return; const col=board[i]; const seen=new Set<number>(), q=[i];
     while(q.length){const x=q.pop()!; if(seen.has(x)||board[x]!==col)continue; seen.add(x); const r=Math.floor(x/11),c=x%11; [x-11,x+11,x-1,x+1].forEach(n=>{if(n>=0&&n<88&&Math.floor(n/11)>=r-1&&Math.floor(n/11)<=r+1&&Math.abs((n%11)-c)<=1)q.push(n)})}
     if(seen.size<3)return;
+    onEvent({type:"choice",value:String(seen.size)});
     const a=board.map((v,j)=>seen.has(j) ? null : v).filter(Boolean) as string[];
     const next=[...Array(88-a.length).fill(null),...a];
     setBoard(next); setScore(s=>s+seen.size*seen.size*10);
     if(!a.length){setDone(true);onFinish({score:score+seen.size*seen.size*10,xp:150,time:30-time})}
   }
-  if(done)return <ResultBox result={{score,xp:150}} onRestart={()=>{setBoard(Array.from({length:88},()=>colors[rand(3)]));setScore(0);setTime(30);setDone(false)}}/>;
+  if(done){const preview={score,xp:150};return <RankedResult submission={rankedSubmission} preview={preview} onRestart={()=>{setBoard(Array.from({length:88},()=>colors[rand(3)]));setScore(0);setTime(30);setDone(false)}}/>}
   return <div className="challenge"><GameHUD label="BLOCK RUSH" value={String(score)} timer={`${time}s`}/><div className="block-board">{board.map((c,i)=><button key={i} className={`block ${c||"empty"}`} onClick={()=>click(i)}/>)}</div><p className="hint">Clear groups of 3+ matching nodes. Bigger groups = bigger score.</p></div>
 }
 
@@ -165,11 +166,11 @@ function RotatingLock({count,limit,seed,rankedSubmission,onEvent,title,onFinish}
   return <div className="challenge"><GameHUD label={title} value={`${count} LOCKS`} timer={`${Math.max(0,((limit-(Date.now()-start))/1000)).toFixed(1)}s`}/><div className="locks">{angles.map((a,i)=><button key={i} className="lock-ring" style={{transform:`rotate(${a}deg)`}} onClick={()=>{onEvent({type:"choice",value:String(i)});setAngles(v=>v.map((x,j)=>j===i?x+45:x))}}><i/><span style={{transform:`rotate(${-a}deg)`}}>●</span><em style={{transform:`rotate(${-a}deg)`}}>▲</em></button>)}</div><p className="hint">Rotate each ring until its dot aligns with the target marker.</p></div>
 }
 
-function Sync({onFinish}:{onFinish:(r:Result)=>void}) {
+function Sync({rankedSubmission,onEvent,onFinish}:{rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
   const [pos,setPos]=useState(0); const [dir,setDir]=useState(1); const [tries,setTries]=useState(3); const [done,setDone]=useState(false); const [score,setScore]=useState(0);
   useEffect(()=>{if(done)return;const t=setInterval(()=>setPos(p=>{let n=p+dir*2;if(n>=100){setDir(-1);n=100}if(n<=0){setDir(1);n=0}return n}),30);return()=>clearInterval(t)},[dir,done]);
-  function hit(){if(pos>42&&pos<58){const s=score+100;setScore(s);if(s>=500){setDone(true);onFinish({score:s,xp:150})}}else{const t=tries-1;setTries(t);if(t<=0){setDone(true);onFinish({score,xp:20})}}}
-  if(done)return <ResultBox result={{score,xp:score>=500?150:20}} onRestart={()=>location.reload()}/>;
+  function hit(){if(pos>42&&pos<58){onEvent({type:"choice",value:"hit"});const s=score+100;setScore(s);if(s>=500){setDone(true);onFinish({score:s,xp:150})}}else{onEvent({type:"choice",value:"miss"});const t=tries-1;setTries(t);if(t<=0){setDone(true);onFinish({score,xp:20})}}}
+  if(done)return <RankedResult submission={rankedSubmission} preview={{score,xp:score>=500?150:20}} onRestart={()=>location.reload()}/>;
   return <div className="challenge"><GameHUD label="SYNC" value={`${score} PTS`} timer={`${tries} attempts`}/><div className="sync-track"><div className="sync-target"/><div className="sync-cursor" style={{left:`${pos}%`}}/></div><button className="primary huge" onClick={hit}>SYNC PACKET</button></div>
 }
 

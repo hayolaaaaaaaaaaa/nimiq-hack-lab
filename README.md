@@ -34,19 +34,19 @@ The client never submits an authoritative score. It submits events from a server
 
 These challenges have deterministic seeded puzzles and server replay validators:
 
+- **Block Rush:** clear connected network blocks.
 - **NIM PIN:** enter the seeded four-digit code.
-- **Key Sequence:** enter the seeded signal in order.
 - **Address Memory:** memorize and rebuild the seeded token pattern.
-- **NIM Lock:** align four seeded rings.
 - **NIM Vault:** solve the five-ring variant with a tighter time limit.
+- **Sync:** time five packets inside the target.
 
 ### Practice-only
 
 These remain local practice until their replay validators are implemented:
 
-- **Block Rush:** clear connected matching blocks.
 - **NIM Grid:** hit the active node.
-- **Sync:** time packet transfers inside the target.
+- **Key Sequence:** enter the signal in the right order.
+- **NIM Lock:** align the rotating lock rings.
 
 Practice scores are stored only in the browser and never enter rankings.
 

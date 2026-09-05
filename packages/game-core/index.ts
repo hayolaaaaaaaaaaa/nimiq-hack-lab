@@ -1,5 +1,5 @@
-export type RankedGameId = "nim-pin" | "sequence" | "memory" | "nim-lock" | "vault";
-export type GameId = RankedGameId | "block-rush" | "nim-grid" | "nim-lock" | "vault" | "sync";
+export type RankedGameId = "block-rush" | "nim-pin" | "sequence" | "memory" | "nim-lock" | "vault" | "sync";
+export type GameId = RankedGameId | "block-rush" | "nim-grid" | "sync";
 
 export type GameEvent = { t: number; type: "key" | "choice"; value: string };
 export type Puzzle =
@@ -36,7 +36,7 @@ function requireEvents(events: GameEvent[]) {
   return null;
 }
 
-export function createPuzzle(gameId: RankedGameId, seed: string): Puzzle {
+export function createPuzzle(gameId: Exclude<RankedGameId, "block-rush" | "sync">, seed: string): Puzzle {
   const random = seeded(`${gameId}:${seed}`);
   if (gameId === "nim-pin") {
     return { gameId, pin: String(Math.floor(random() * 9000) + 1000) };
@@ -53,6 +53,19 @@ export function createPuzzle(gameId: RankedGameId, seed: string): Puzzle {
 export function replay(gameId: RankedGameId, seed: string, events: GameEvent[]): ReplayResult {
   const timingError = requireEvents(events);
   if (timingError) return { score: 0, xp: 0, valid: false, reason: timingError };
+  if (gameId === "block-rush") {
+    if (events.some(event => event.type !== "choice" || !/^\d+$/.test(event.value))) return { score: 0, xp: 0, valid: false, reason: "invalid block event" };
+    const groups = events.map(event => Number(event.value));
+    if (groups.some(group => group < 3 || group > 88)) return { score: 0, xp: 0, valid: false, reason: "invalid block group" };
+    const score = groups.reduce((total, group) => total + group * group * 10, 0);
+    return { score, xp: 150, valid: true };
+  }
+  if (gameId === "sync") {
+    if (events.some(event => event.type !== "choice" || !/^(hit|miss)$/.test(event.value))) return { score: 0, xp: 0, valid: false, reason: "invalid sync event" };
+    const hits = events.filter(event => event.value === "hit").length;
+    if (hits < 5) return { score: 0, xp: 0, valid: false, reason: "sync challenge incomplete" };
+    return { score: hits * 100, xp: 150, valid: true };
+  }
   const puzzle = createPuzzle(gameId, seed);
   const minimumGap = gameId === "sequence" ? 70 : gameId === "nim-lock" || gameId === "vault" ? 100 : 80;
   for (let index = 1; index < events.length; index += 1) {
@@ -84,7 +97,7 @@ export function replay(gameId: RankedGameId, seed: string, events: GameEvent[]):
 }
 
 export function dailyGame(day: string): RankedGameId {
-  const rotation: RankedGameId[] = ["nim-pin", "sequence", "memory", "nim-lock", "vault"];
+  const rotation: RankedGameId[] = ["block-rush", "nim-pin", "memory", "vault", "sync"];
   let value = 0;
   for (const character of day) value = (value * 31 + character.charCodeAt(0)) >>> 0;
   return rotation[value % rotation.length];

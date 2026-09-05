@@ -8,7 +8,7 @@ test("same seed creates the same puzzle", () => {
 });
 
 test("daily rotation always selects a ranked challenge", () => {
-  const ranked = new Set(["nim-pin", "sequence", "memory", "nim-lock", "vault"]);
+  const ranked = new Set(["block-rush", "nim-pin", "memory", "vault", "sync"]);
   for (const day of ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"]) assert.equal(ranked.has(dailyGame(day)), true);
 });
 
@@ -41,4 +41,18 @@ test("replay validates seeded locks", () => {
     assert.equal(replay("nim-lock", "lock-seed", solvedEvents).valid, true);
     assert.equal(events.length, 4);
   }
+});
+
+test("replay validates ranked block rush and sync events", () => {
+  const blocks = replay("block-rush", "block-seed", [
+    { t: 100, type: "choice", value: "3" },
+    { t: 200, type: "choice", value: "4" },
+  ]);
+  assert.deepEqual(blocks, { score: 250, xp: 150, valid: true });
+  const sync = replay("sync", "sync-seed", Array.from({ length: 5 }, (_, index) => ({
+    t: (index + 1) * 100,
+    type: "choice" as const,
+    value: "hit",
+  })));
+  assert.deepEqual(sync, { score: 500, xp: 150, valid: true });
 });
