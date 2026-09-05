@@ -166,7 +166,7 @@ function RotatingLock({count,limit,seed,rankedSubmission,onEvent,title,onFinish}
   return <div className="challenge"><GameHUD label={title} value={`${count} LOCKS`} timer={`${Math.max(0,((limit-(Date.now()-start))/1000)).toFixed(1)}s`}/><div className="locks">{angles.map((a,i)=><button key={i} className="lock-ring" style={{transform:`rotate(${a}deg)`}} onClick={()=>{onEvent({type:"choice",value:String(i)});setAngles(v=>v.map((x,j)=>j===i?x+45:x))}}><i/><span style={{transform:`rotate(${-a}deg)`}}>●</span><em style={{transform:`rotate(${-a}deg)`}}>▲</em></button>)}</div><p className="hint">Rotate each ring until its dot aligns with the target marker.</p></div>
 }
 
-function Sync({rankedSubmission,onEvent,onFinish}:{rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
+function Sync({ranked,rankedSubmission,onEvent,onFinish}:{ranked:boolean;rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
   const [pos,setPos]=useState(0); const [dir,setDir]=useState(1); const [tries,setTries]=useState(3); const [done,setDone]=useState(false); const [score,setScore]=useState(0);
   useEffect(()=>{if(done)return;const t=setInterval(()=>setPos(p=>{let n=p+dir*2;if(n>=100){setDir(-1);n=100}if(n<=0){setDir(1);n=0}return n}),30);return()=>clearInterval(t)},[dir,done]);
   function hit(){if(pos>42&&pos<58){onEvent({type:"choice",value:"hit"});const s=score+100;setScore(s);if(s>=500){setDone(true);onFinish({score:s,xp:150})}}else{onEvent({type:"choice",value:"miss"});const t=tries-1;setTries(t);if(t<=0){setDone(true);onFinish({score,xp:20})}}}
