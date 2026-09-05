@@ -56,8 +56,12 @@ const seedFor = (day: string, gameId: string) => createHmac("sha256", dailySecre
 function verifyNimiqMessage(message: string, signer: string, publicKeyHex: string, signatureHex: string) {
   const publicKey = PublicKey.deserialize(Buffer.from(publicKeyHex, "hex"));
   const signature = Signature.deserialize(Buffer.from(signatureHex, "hex"));
-  const payload = text(`\x16Nimiq Signed Message:\n${message.length}${message}`);
-  if (!publicKey.verify(signature, Hash.computeSha256(payload))) return false;
+  const payloads = [
+    text(`\x16Nimiq Signed Message:\n${message.length}${message}`),
+    text(`Nimiq Signed Message:\n${message.length}${message}`),
+    text(message),
+  ];
+  if (!payloads.some(payload => publicKey.verify(signature, Hash.computeSha256(payload)))) return false;
   const derived = Address.fromPublicKeys([publicKey], 1).toUserFriendlyAddress().split(" ").join("").toUpperCase();
   return derived === signer.split(" ").join("").toUpperCase();
 }
