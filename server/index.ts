@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, address TEXT NOT NULL, gam
 CREATE TABLE IF NOT EXISTS scores (id SERIAL PRIMARY KEY, address TEXT NOT NULL, game_id TEXT NOT NULL, mode TEXT NOT NULL, day TEXT, score INTEGER NOT NULL, xp INTEGER NOT NULL, duration_ms INTEGER NOT NULL, run_id TEXT UNIQUE, created_at TIMESTAMPTZ NOT NULL);
 CREATE TABLE IF NOT EXISTS reward_claims (address TEXT NOT NULL, day TEXT NOT NULL, amount_nim INTEGER NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL, PRIMARY KEY (address, day));
 CREATE TABLE IF NOT EXISTS analytics_events (id SERIAL PRIMARY KEY, event TEXT NOT NULL, game_id TEXT, address TEXT, created_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS friend_challenges (id TEXT PRIMARY KEY, token TEXT UNIQUE NOT NULL, game_id TEXT NOT NULL, creator_address TEXT NOT NULL, opponent_address TEXT, seed TEXT NOT NULL, creator_score INTEGER, opponent_score INTEGER, created_at TIMESTAMPTZ NOT NULL, expires_at TIMESTAMPTZ NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS scores_daily_unique ON scores(address, game_id, day) WHERE mode = 'daily';
 `);
 
@@ -90,6 +91,51 @@ app.post("/analytics/event", async c => {
   const address = await sessionAddress(c);
   await db.query("INSERT INTO analytics_events(event, game_id, address, created_at) VALUES ($1, $2, $3, $4)", [body.event, body.gameId || null, address, iso(now())]);
   return c.json({ ok: true });
+});
+
+app.post("/challenges", async c => {
+  const address = await sessionAddress(c);
+  if (!address) return c.json({ error: "ranked session required" }, 401);
+  const body = await c.req.json<{ gameId?: RankedGameId }>();
+  if (!body.gameId || !rankedGames.has(body.gameId)) return c.json({ error: "game is not challenge-capable" }, 400);
+  const id = randomBytes(16).toString("hex");
+  const token = randomBytes(8).toString("base64url");
+  const seed = randomBytes(16).toString("hex");
+  const created = now();
+  await db.query("INSERT INTO friend_challenges(id, token, game_id, creator_address, seed, created_at, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7)", [id, token, body.gameId, address, seed, iso(created), iso(created + 24 * 60 * 60_000)]);
+  return c.json({ token, gameId: body.gameId, seed, expiresAt: iso(created + 24 * 60 * 60_000) });
+});
+
+app.get("/challenges/:token", async c => {
+  const row = (await db.query("SELECT token, game_id, creator_address, opponent_address, creator_score, opponent_score, expires_at FROM friend_challenges WHERE token = $1", [c.req.param("token")])).rows[0] as any;
+  if (!row || Date.parse(row.expires_at) <= now()) return c.json({ error: "challenge not found or expired" }, 404);
+  return c.json({ token: row.token, gameId: row.game_id, creator: `${row.creator_address.slice(0, 6)}…${row.creator_address.slice(-4)}`, joined: Boolean(row.opponent_address), creatorScore: row.creator_score, opponentScore: row.opponent_score, expiresAt: row.expires_at });
+});
+
+app.post("/challenges/:token/join", async c => {
+  const address = await sessionAddress(c);
+  if (!address) return c.json({ error: "ranked session required" }, 401);
+  const row = (await db.query("SELECT * FROM friend_challenges WHERE token = $1", [c.req.param("token")])).rows[0] as any;
+  if (!row || Date.parse(row.expires_at) <= now()) return c.json({ error: "challenge not found or expired" }, 404);
+  if (row.creator_address === address) return c.json({ error: "creator cannot join their own challenge" }, 400);
+  if (row.opponent_address && row.opponent_address !== address) return c.json({ error: "challenge already joined" }, 409);
+  await db.query("UPDATE friend_challenges SET opponent_address = $1 WHERE token = $2 AND opponent_address IS NULL", [address, row.token]);
+  return c.json({ token: row.token, gameId: row.game_id, seed: row.seed });
+});
+
+app.post("/challenges/:token/submit", async c => {
+  const address = await sessionAddress(c);
+  if (!address) return c.json({ error: "ranked session required" }, 401);
+  const row = (await db.query("SELECT * FROM friend_challenges WHERE token = $1", [c.req.param("token")])).rows[0] as any;
+  if (!row || Date.parse(row.expires_at) <= now()) return c.json({ error: "challenge not found or expired" }, 404);
+  if (row.creator_address !== address && row.opponent_address !== address) return c.json({ error: "wallet is not part of this challenge" }, 403);
+  const body = await c.req.json<{ events?: GameEvent[] }>();
+  const result = replay(row.game_id, row.seed, body.events || []);
+  if (!result.valid) return c.json({ error: result.reason || "invalid replay" }, 400);
+  const column = row.creator_address === address ? "creator_score" : "opponent_score";
+  if (row[column] !== null) return c.json({ error: "challenge attempt already submitted" }, 409);
+  await db.query(`UPDATE friend_challenges SET ${column} = $1 WHERE token = $2 AND ${column} IS NULL`, [result.score, row.token]);
+  return c.json({ score: result.score, xp: result.xp, opponentScore: row.creator_address === address ? row.opponent_score : row.creator_score });
 });
 
 app.post("/auth/nonce", async c => {

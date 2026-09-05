@@ -1,7 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:8787");
 
 export type RunMode = "daily" | "ranked" | "practice";
-export type Run = { runId: string; seed: string; gameId: string; mode: RunMode; expiresAt: string };
+export type Run = { runId: string; seed: string; gameId: string; mode: RunMode; expiresAt: string; challengeToken?: string };
 export type DailyOperation = { day: string; gameId: string; startsAt: string; endsAt: string; rewardNim: number; qualificationScore: number };
 export type DailyStatus = { eligible: boolean; claimed: boolean; score: number; rewardNim: number; qualificationScore: number };
 
@@ -72,4 +72,22 @@ export async function trackEvent(event: "wallet_connected" | "run_started" | "ru
     body: JSON.stringify({ event, gameId }),
     keepalive: true,
   }).catch(() => {});
+}
+
+export async function createChallenge(gameId: string) {
+  const response = await fetch(`${API_URL}/challenges`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gameId }) });
+  if (!response.ok) throw new Error((await response.json()).error || "Could not create challenge");
+  return await response.json() as { token: string; gameId: string; seed: string; expiresAt: string };
+}
+
+export async function joinChallenge(token: string) {
+  const response = await fetch(`${API_URL}/challenges/${encodeURIComponent(token)}/join`, { method: "POST", credentials: "include" });
+  if (!response.ok) throw new Error((await response.json()).error || "Could not join challenge");
+  return await response.json() as { token: string; gameId: string; seed: string };
+}
+
+export async function submitChallenge(token: string, events: unknown[]) {
+  const response = await fetch(`${API_URL}/challenges/${encodeURIComponent(token)}/submit`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ events }) });
+  if (!response.ok) throw new Error((await response.json()).error || "Challenge run was rejected");
+  return await response.json() as { score: number; xp: number; opponentScore: number | null };
 }

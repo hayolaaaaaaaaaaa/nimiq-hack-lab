@@ -74,6 +74,10 @@ The server rejects expired sessions, expired or reused nonces, mismatched addres
 
 The wallet is used for identity and authentication. It does not sign client-selected scores.
 
+## Friend challenges
+
+Connected operators can create a non-monetary challenge token for a ranked game. A friend joins with the token, both players receive the same server-generated seed, and each replay is validated independently before scores are compared.
+
 ## Security model
 
 - One-time login nonce with a five-minute expiry.

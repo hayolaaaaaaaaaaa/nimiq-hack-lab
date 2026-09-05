@@ -9,3 +9,5 @@ OPERATOR is a skill competition, not a wagering product.
 - Daily reward requests are limited to one wallet per UTC day.
 - Rewards are granted only for qualifying verified results.
 - Reward settlement must be auditable with a transaction reference.
+- Friend challenges use shared deterministic seeds and compare verified skill results.
+- Friend challenges do not require entry fees, wagers, or money transfers between players.
