@@ -63,3 +63,13 @@ export async function getMe() {
   if (!response.ok) throw new Error("Could not load operator profile");
   return await response.json() as { address: string | null; xp: number; streak: number; rating: number; grade: string; verifiedRuns: number };
 }
+
+export async function trackEvent(event: "wallet_connected" | "run_started" | "run_verified" | "run_rejected" | "reward_requested", gameId?: string) {
+  await fetch(`${API_URL}/analytics/event`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event, gameId }),
+    keepalive: true,
+  }).catch(() => {});
+}

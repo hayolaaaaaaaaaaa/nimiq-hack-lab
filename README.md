@@ -95,6 +95,7 @@ The wallet is used for identity and authentication. It does not sign client-sele
 - [Security](docs/SECURITY.md)
 - [Replay protocol](docs/REPLAY-PROTOCOL.md)
 - [Nimiq integration](docs/NIMIQ-INTEGRATION.md)
+- [Analytics](docs/ANALYTICS.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [Competition rules](docs/COMPETITION.md)
 

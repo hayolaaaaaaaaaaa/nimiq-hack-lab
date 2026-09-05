@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, address TEXT NOT NULL,
 CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, address TEXT NOT NULL, game_id TEXT NOT NULL, mode TEXT NOT NULL, day TEXT, seed TEXT NOT NULL, started_at TIMESTAMPTZ NOT NULL, expires_at TIMESTAMPTZ NOT NULL, consumed_at TIMESTAMPTZ);
 CREATE TABLE IF NOT EXISTS scores (id SERIAL PRIMARY KEY, address TEXT NOT NULL, game_id TEXT NOT NULL, mode TEXT NOT NULL, day TEXT, score INTEGER NOT NULL, xp INTEGER NOT NULL, duration_ms INTEGER NOT NULL, run_id TEXT UNIQUE, created_at TIMESTAMPTZ NOT NULL);
 CREATE TABLE IF NOT EXISTS reward_claims (address TEXT NOT NULL, day TEXT NOT NULL, amount_nim INTEGER NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL, PRIMARY KEY (address, day));
+CREATE TABLE IF NOT EXISTS analytics_events (id SERIAL PRIMARY KEY, event TEXT NOT NULL, game_id TEXT, address TEXT, created_at TIMESTAMPTZ NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS scores_daily_unique ON scores(address, game_id, day) WHERE mode = 'daily';
 `);
 
@@ -80,6 +81,16 @@ async function sessionAddress(c: any): Promise<string | null> {
 
 app.use("/*", cors({ origin: process.env.WEB_ORIGIN || "http://localhost:5173", credentials: true }));
 app.get("/health", c => c.json({ ok: true }));
+
+app.post("/analytics/event", async c => {
+  let body: { event?: string; gameId?: string } = {};
+  try { body = await c.req.json<{ event?: string; gameId?: string }>(); } catch {}
+  const allowed = new Set(["wallet_connected", "run_started", "run_verified", "run_rejected", "reward_requested"]);
+  if (!body.event || !allowed.has(body.event)) return c.json({ error: "invalid analytics event" }, 400);
+  const address = await sessionAddress(c);
+  await db.query("INSERT INTO analytics_events(event, game_id, address, created_at) VALUES ($1, $2, $3, $4)", [body.event, body.gameId || null, address, iso(now())]);
+  return c.json({ ok: true });
+});
 
 app.post("/auth/nonce", async c => {
   const nonce = randomBytes(32).toString("hex");

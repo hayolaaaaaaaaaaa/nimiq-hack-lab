@@ -5,7 +5,7 @@ import {
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
 import { connectNimiq, isNimiqPay } from "./nimiq";
-import { getDaily, getDailyStatus, getLeaderboard, getMe, logoutSession, requestDailyReward, startRun, submitRun, type DailyOperation, type DailyStatus, type Run } from "./api";
+import { getDaily, getDailyStatus, getLeaderboard, getMe, logoutSession, requestDailyReward, startRun, submitRun, trackEvent, type DailyOperation, type DailyStatus, type Run } from "./api";
 import type { GameEvent } from "../packages/game-core/index";
 import { createPuzzle } from "../packages/game-core/index";
 
@@ -55,7 +55,7 @@ function App() {
     setWalletError(null);
     try {
       const a=await connectNimiq();
-      if(a){setWallet(a);getMe().then(profile=>{setXp(profile.xp);setProfile(profile)}).catch(()=>{})}
+      if(a){setWallet(a);trackEvent("wallet_connected");getMe().then(profile=>{setXp(profile.xp);setProfile(profile)}).catch(()=>{})}
     } catch (e) {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
@@ -72,7 +72,7 @@ function App() {
   }
   async function requestReward(){
     setRewardError(null);
-    try { await requestDailyReward(); setDailyStatus(status=>status ? {...status, eligible:false, claimed:true} : status); }
+    try { await requestDailyReward(); trackEvent("reward_requested"); setDailyStatus(status=>status ? {...status, eligible:false, claimed:true} : status); }
     catch (error) { setRewardError(error instanceof Error ? error.message : "Could not request daily reward"); }
   }
   const rankedGames = ["block-rush", "nim-pin", "memory", "vault", "sync"];
@@ -81,11 +81,11 @@ function App() {
     setRankedSubmission({state:"idle"});
     eventsRef.current=[];
     const rankedMode = wallet && rankedGames.includes(id) && mode !== "daily" ? "ranked" : mode;
-    if (wallet && rankedGames.includes(id)) setActiveRun(await startRun(id, rankedMode));
+    if (wallet && rankedGames.includes(id)) { setActiveRun(await startRun(id, rankedMode)); trackEvent("run_started", id); }
     runStartedAt.current=performance.now();
     setGame(id);
   }
-  async function finish(id:GameId,r:Result){if(activeRun){setRankedSubmission({state:"submitting"});try{const result=await submitRun(activeRun.runId,eventsRef.current);setRankedSubmission({state:"verified",score:result.score,xp:result.xp});setLeaderboardGame(id);setVerifiedBest(result.best);setScores(x=>({...x,[id]:Math.max(x[id]||0,result.best)}));setXp(x=>x+result.xp);getMe().then(profile=>{setXp(profile.xp);setProfile(profile)}).catch(()=>{});if(activeRun.mode==="daily"){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10));setDailyStatus({eligible:result.score>=500,claimed:false,score:result.score,rewardNim:dailyOperation?.rewardNim||5,qualificationScore:dailyOperation?.qualificationScore||500})}}catch(error){setRankedSubmission({state:"rejected",error:error instanceof Error?error.message:"Run was not accepted"})}return}setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp)}
+  async function finish(id:GameId,r:Result){if(activeRun){setRankedSubmission({state:"submitting"});try{const result=await submitRun(activeRun.runId,eventsRef.current);trackEvent("run_verified", id);setRankedSubmission({state:"verified",score:result.score,xp:result.xp});setLeaderboardGame(id);setVerifiedBest(result.best);setScores(x=>({...x,[id]:Math.max(x[id]||0,result.best)}));setXp(x=>x+result.xp);getMe().then(profile=>{setXp(profile.xp);setProfile(profile)}).catch(()=>{});if(activeRun.mode==="daily"){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10));setDailyStatus({eligible:result.score>=500,claimed:false,score:result.score,rewardNim:dailyOperation?.rewardNim||5,qualificationScore:dailyOperation?.qualificationScore||500})}}catch(error){trackEvent("run_rejected", id);setRankedSubmission({state:"rejected",error:error instanceof Error?error.message:"Run was not accepted"})}return}setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp)}
   if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>{setGame(null);setActiveRun(null)}}><Game id={game} run={activeRun} rankedSubmission={rankedSubmission} onEvent={event=>eventsRef.current.push({...event,t:Math.round(performance.now()-runStartedAt.current)})} onFinish={r=>finish(game,r)}/></GameShell>;
   return <main className="site">
     <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><img className="brand-logo" src="/logo/operator-mark.svg" alt=""/><span className="wordmark-main">OPERATOR</span><span className="wordmark-sub">BY NIMIQ</span></button><nav className="nav-links"><a href="#lab">Challenges</a><a href="#leaderboard">Rankings</a><a href="#profile">Profile</a></nav>{wallet?<button className="connect" onClick={signOut}><i/>SIGN OUT</button>:<button className="connect" onClick={connect}><i/>{isNimiqPay()?"Connect Nimiq Pay":"Connect NIM"}</button>}</header>
