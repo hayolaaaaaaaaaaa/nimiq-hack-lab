@@ -5,7 +5,7 @@ import {
   Sparkles, Trophy, UserRound, Zap
 } from "lucide-react";
 import { connectNimiq, isNimiqPay } from "./nimiq";
-import { getDaily, getLeaderboard, startRun, submitRun, type DailyOperation, type Run } from "./api";
+import { getDaily, getLeaderboard, getMe, startRun, submitRun, type DailyOperation, type Run } from "./api";
 import type { GameEvent } from "../packages/game-core/index";
 import { createPuzzle } from "../packages/game-core/index";
 
@@ -37,11 +37,13 @@ function App() {
   const [rankedSubmission,setRankedSubmission]=useState<RankedSubmission>({state:"idle"});
   const [dailyOperation,setDailyOperation]=useState<DailyOperation|null>(null);
   const [leaderboard,setLeaderboard]=useState<Array<{address:string;score:number}>>([]);
+  const [leaderboardGame,setLeaderboardGame]=useState<GameId>("sequence");
+  const [verifiedBest,setVerifiedBest]=useState(0);
   const [xp,setXp]=useState(()=>Number(localStorage.getItem("nhl-xp")||0));
   const [scores,setScores]=useState<Record<string,number>>(()=>JSON.parse(localStorage.getItem("nhl-scores")||"{}"));
   const [dailyDone,setDailyDone]=useState(()=>localStorage.getItem("nhl-daily")===new Date().toISOString().slice(0,10));
   useEffect(()=>localStorage.setItem("nhl-xp",String(xp)),[xp]); useEffect(()=>localStorage.setItem("nhl-scores",JSON.stringify(scores)),[scores]);
-  useEffect(()=>{getLeaderboard("sequence").then(rows=>setLeaderboard(rows)).catch(()=>setLeaderboard([]))},[]);
+  useEffect(()=>{getLeaderboard(leaderboardGame).then(rows=>setLeaderboard(rows)).catch(()=>setLeaderboard([]))},[leaderboardGame]);
   useEffect(()=>{getDaily().then(setDailyOperation).catch(()=>setDailyOperation(null))},[]);
   const level=Math.floor(xp/500)+1, levelXp=xp%500, best=Math.max(0,...Object.values(scores));
   const [walletError,setWalletError]=useState<string|null>(null);
@@ -49,7 +51,7 @@ function App() {
     setWalletError(null);
     try {
       const a=await connectNimiq();
-      if(a) setWallet(a);
+      if(a){setWallet(a);getMe().then(profile=>{setXp(profile.xp)}).catch(()=>{})}
     } catch (e) {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
@@ -63,7 +65,7 @@ function App() {
     runStartedAt.current=performance.now();
     setGame(id);
   }
-  async function finish(id:GameId,r:Result){if(activeRun){setRankedSubmission({state:"submitting"});try{const result=await submitRun(activeRun.runId,eventsRef.current);setRankedSubmission({state:"verified",score:result.score,xp:result.xp});setScores(x=>({...x,[id]:Math.max(x[id]||0,result.score)}));setXp(x=>x+result.xp);getLeaderboard(id).then(rows=>setLeaderboard(rows)).catch(()=>{});if(activeRun.mode==="daily"){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}}catch(error){setRankedSubmission({state:"rejected",error:error instanceof Error?error.message:"Run was not accepted"})}return}setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp)}
+  async function finish(id:GameId,r:Result){if(activeRun){setRankedSubmission({state:"submitting"});try{const result=await submitRun(activeRun.runId,eventsRef.current);setRankedSubmission({state:"verified",score:result.score,xp:result.xp});setLeaderboardGame(id);setVerifiedBest(result.best);setScores(x=>({...x,[id]:Math.max(x[id]||0,result.best)}));setXp(x=>x+result.xp);if(activeRun.mode==="daily"){setDailyDone(true);localStorage.setItem("nhl-daily",new Date().toISOString().slice(0,10))}}catch(error){setRankedSubmission({state:"rejected",error:error instanceof Error?error.message:"Run was not accepted"})}return}setScores(x=>({...x,[id]:Math.max(x[id]||0,r.score)}));setXp(x=>x+r.xp)}
   if(game)return <GameShell title={games.find(g=>g.id===game)?.name||"Game"} onBack={()=>{setGame(null);setActiveRun(null)}}><Game id={game} run={activeRun} rankedSubmission={rankedSubmission} onEvent={event=>eventsRef.current.push({...event,t:Math.round(performance.now()-runStartedAt.current)})} onFinish={r=>finish(game,r)}/></GameShell>;
   return <main className="site">
     <header className="nav"><button className="wordmark" onClick={()=>scrollTo(0,0)}><img className="brand-logo" src="/logo/operator-mark.svg" alt=""/><span className="wordmark-main">OPERATOR</span><span className="wordmark-sub">BY NIMIQ</span></button><nav className="nav-links"><a href="#lab">Challenges</a><a href="#leaderboard">Rankings</a><a href="#profile">Profile</a></nav><button className="connect" onClick={connect}><i/>{wallet?`${wallet.slice(0,6)}…${wallet.slice(-4)}`:(isNimiqPay()?"Connect Nimiq Pay":"Connect NIM")}</button></header>
@@ -72,7 +74,7 @@ function App() {
     <section className="season-strip"><div><small>SEASON</small><b>01</b></div><div><small>OPERATORS</small><b>—</b></div><div><small>RANKED RUNS</small><b>—</b></div><div><small>STATUS</small><b className="live">● ONLINE</b></div></section>
     <section id="feature" className="feature-section"><div className="section-label">01 <span>DAILY OPERATION</span></div><div className="feature-card"><div><div className="feature-icon"><img src="/logo/operator-mark.svg" alt="OPERATOR"/></div><small>TODAY'S CHALLENGE</small><h2>{dailyOperation ? games.find(game => game.id === dailyOperation.gameId)?.name.toUpperCase() : "LOADING"}</h2><p>{wallet ? "One verified attempt. Your score is replayed and ranked by the server." : "Connect your Nimiq wallet to enter today's verified operation. Practice remains available locally."}</p></div><div className="feature-side"><div><small>MODE</small><strong>{wallet ? "RANKED" : "CONNECT"}</strong></div><div><small>ATTEMPTS</small><strong>ONE</strong></div><button className="gold-btn compact" disabled={!dailyOperation} onClick={()=>wallet && dailyOperation ? launchGame(dailyOperation.gameId as GameId, "daily") : connect()}>{wallet ? "START OPERATION" : "CONNECT TO PLAY"} ↗</button></div></div></section>
     <section id="lab" className="lab-section"><div className="section-heading"><div><span>02</span><h2>CHALLENGES</h2></div><p>SIX RANKED.<br/>THREE PRACTICE.</p></div><div className="game-list">{games.map((g,i)=>{const Icon=g.icon;const ranked=rankedGames.includes(g.id);return <button className="editorial-game" key={g.id} onClick={()=>launchGame(g.id)}><span>0{i+1}</span><Icon size={20}/><div><b>{g.name}</b><small>{g.subtitle}</small></div><small>{ranked?"RANKED":"PRACTICE"}</small><strong>↗</strong></button>})}</div></section>
-    <section id="leaderboard" className="leaderboard-section"><div className="section-heading"><div><span>03</span><h2>RANKINGS</h2></div><p>VERIFIED DAILY<br/>SCORES</p></div><div className="leaderboard-table">{leaderboard.length ? leaderboard.map((row,index)=><div className="rank-row" key={row.address}><span>{String(index+1).padStart(2,"0")}</span><span>{row.address.slice(0,6)}…{row.address.slice(-3)}</span><b>{row.score.toLocaleString()}</b><i>↗</i></div>) : <div className="leaderboard-empty"><b>{wallet ? "NO VERIFIED SCORES YET" : "CONNECT TO RANK"}</b><span>{wallet ? "Be the first connected operator to submit a verified score." : "Guest scores stay on this device and never enter the board."}</span></div>}<div className="your-rank"><span>YOUR BEST</span><b>{wallet ? (best || "—") : "GUEST"}</b><strong>{wallet ? "VERIFICATION REQUIRED" : "LOCAL PRACTICE"}</strong></div></div></section>
+    <section id="leaderboard" className="leaderboard-section"><div className="section-heading"><div><span>03</span><h2>RANKINGS</h2></div><p>{games.find(item=>item.id===leaderboardGame)?.name.toUpperCase()}<br/>VERIFIED SCORES</p></div><div className="leaderboard-table">{leaderboard.length ? leaderboard.map((row,index)=><div className="rank-row" key={row.address}><span>{String(index+1).padStart(2,"0")}</span><span>{row.address.slice(0,6)}…{row.address.slice(-3)}</span><b>{row.score.toLocaleString()}</b><i>↗</i></div>) : <div className="leaderboard-empty"><b>{wallet ? "NO VERIFIED SCORES YET" : "CONNECT TO RANK"}</b><span>{wallet ? "Complete a ranked challenge to appear here." : "Guest scores stay on this device and never enter the board."}</span></div>}<div className="your-rank"><span>YOUR BEST</span><b>{wallet ? (verifiedBest || scores[leaderboardGame] || "—") : "GUEST"}</b><strong>{wallet ? "VERIFIED OPERATOR" : "VERIFICATION REQUIRED"}</strong></div></div></section>
     <section id="profile" className="profile-section"><div className="profile-card"><div className="profile-head"><div><span>04</span><small>OPERATOR PROFILE</small></div><div>LVL <b>{level}</b></div></div><div className="profile-main"><div><small>CURRENT XP</small><div className="big-xp">{xp.toLocaleString()}</div><div className="xp-line"><i style={{width:`${levelXp/5}%`}}/></div><small>{500-levelXp} XP TO LEVEL {level+1}</small></div><div className="profile-stats"><div><small>BEST SCORE</small><b>{best||"—"}</b></div><div><small>STREAK</small><b>{dailyDone?"1 DAY":"—"}</b></div><div><small>PLAYER</small><b>{wallet?"NIM":"GUEST"}</b></div></div></div></div></section>
     <footer><span>OPERATOR</span><span>COMPETITIVE SKILL CHALLENGES, POWERED BY NIMIQ</span><span>NO PRIVATE KEYS ARE EVER EXPOSED</span></footer>
   </main>

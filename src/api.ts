@@ -39,3 +39,9 @@ export async function getLeaderboard(gameId: string, period: "daily" | "all" = "
   if (!response.ok) throw new Error("Could not load leaderboard");
   return await response.json() as Array<{ address: string; score: number; created_at: string }>;
 }
+
+export async function getMe() {
+  const response = await fetch(`${API_URL}/me`, { credentials: "include" });
+  if (!response.ok) throw new Error("Could not load operator profile");
+  return await response.json() as { address: string | null; xp: number; streak: number };
+}
