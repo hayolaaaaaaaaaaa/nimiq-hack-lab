@@ -4,7 +4,7 @@ import { cors } from "hono/cors";
 import Database from "better-sqlite3";
 import { Pool } from "pg";
 import { createHmac, randomBytes } from "node:crypto";
-import { Address, Hash, PublicKey, Signature } from "@nimiq/core";
+import { Hash, PublicKey, Signature } from "@nimiq/core";
 import { createPuzzle, dailyGame, replay, type GameEvent, type RankedGameId } from "../packages/game-core/index.js";
 
 const app = new Hono();
@@ -62,7 +62,7 @@ function verifyNimiqMessage(message: string, signer: string, publicKeyHex: strin
     text(message),
   ];
   if (!payloads.some(payload => publicKey.verify(signature, Hash.computeSha256(payload)))) return false;
-  const derived = Address.fromPublicKeys([publicKey], 1).toUserFriendlyAddress().split(" ").join("").toUpperCase();
+  const derived = publicKey.toAddress().toUserFriendlyAddress().split(" ").join("").toUpperCase();
   return derived === signer.split(" ").join("").toUpperCase();
 }
 
