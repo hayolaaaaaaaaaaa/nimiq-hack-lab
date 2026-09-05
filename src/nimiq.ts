@@ -29,7 +29,13 @@ export async function connectNimiq(): Promise<string | null> {
     const hub = new HubApi(HUB_URL);
     signed = await hub.signMessage({ appName: "Nimiq Skill Arcade", message });
   }
-  const toHex = (value: string | Uint8Array) => typeof value === "string" ? value : Array.from(value).map(byte => byte.toString(16).padStart(2, "0")).join("");
+  const toHex = (value: string | Uint8Array) => {
+    if (typeof value !== "string") return Array.from(value).map(byte => byte.toString(16).padStart(2, "0")).join("");
+    const normalized = value.replace(/^0x/, "").replace(/\s/g, "");
+    if (/^[0-9a-f]+$/i.test(normalized) && normalized.length % 2 === 0) return normalized;
+    const binary = atob(value);
+    return Array.from(binary, character => character.charCodeAt(0).toString(16).padStart(2, "0")).join("");
+  };
   const signer = typeof signed?.signer === "string" ? signed.signer.trim() : "";
   if (!signer || !signed?.publicKey && !signed?.signerPublicKey || !signed?.signature) throw new Error("Wallet did not return a complete signed login");
   return (await verifyLogin({ message, signer, signerPublicKey: toHex(signed.signerPublicKey || signed.publicKey), signature: toHex(signed.signature) })).address;
