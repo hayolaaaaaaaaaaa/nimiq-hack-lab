@@ -28,7 +28,7 @@ Connect Nimiq wallet
 
 The client never submits an authoritative score. It submits events from a server-issued run.
 
-## 9 challenges
+## 8 challenges
 
 ### Ranked runs
 
@@ -39,7 +39,6 @@ These challenges have deterministic seeded puzzles and server replay validators:
 - **Address Memory:** memorize and rebuild the seeded token pattern.
 - **NIM Lock:** align four seeded rings.
 - **NIM Vault:** solve the five-ring variant with a tighter time limit.
-- **Node Breach:** reconstruct the seeded hexadecimal packet.
 
 ### Practice-only
 

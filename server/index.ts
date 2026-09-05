@@ -34,8 +34,8 @@ const db = {
 };
 const sessionSecret = process.env.SESSION_SECRET || "development-only-change-me";
 const dailySecret = process.env.DAILY_SECRET || "development-daily-secret";
-const rankedGames = new Set<RankedGameId>(["nim-pin", "sequence", "memory", "nim-lock", "vault", "node-breach"]);
-const gameLimits: Record<RankedGameId, number> = { "nim-pin": 12000, sequence: 7000, memory: 2500, "nim-lock": 20000, vault: 10000, "node-breach": 9000 };
+const rankedGames = new Set<RankedGameId>(["nim-pin", "sequence", "memory", "nim-lock", "vault"]);
+const gameLimits: Record<RankedGameId, number> = { "nim-pin": 12000, sequence: 7000, memory: 2500, "nim-lock": 20000, vault: 10000 };
 
 await db.query(`
 CREATE TABLE IF NOT EXISTS addresses (address TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL);

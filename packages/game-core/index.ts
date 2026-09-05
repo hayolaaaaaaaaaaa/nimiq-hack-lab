@@ -1,18 +1,16 @@
-export type RankedGameId = "nim-pin" | "sequence" | "memory" | "nim-lock" | "vault" | "node-breach";
-export type GameId = RankedGameId | "block-rush" | "nim-grid" | "nim-lock" | "vault" | "sync" | "node-breach";
+export type RankedGameId = "nim-pin" | "sequence" | "memory" | "nim-lock" | "vault";
+export type GameId = RankedGameId | "block-rush" | "nim-grid" | "nim-lock" | "vault" | "sync";
 
 export type GameEvent = { t: number; type: "key" | "choice"; value: string };
 export type Puzzle =
   | { gameId: "nim-pin"; pin: string }
   | { gameId: "sequence"; sequence: string[] }
   | { gameId: "memory"; tokens: string[] }
-  | { gameId: "nim-lock" | "vault"; targetAngles: number[] }
-  | { gameId: "node-breach"; sequence: string[] };
+  | { gameId: "nim-lock" | "vault"; targetAngles: number[] };
 export type ReplayResult = { score: number; xp: number; valid: boolean; reason?: string };
 
 const sequenceChars = "QWERASD";
 const memoryTokens = ["NQ", "7F", "3A", "C2", "91", "D8"];
-const hexChars = "0123456789ABCDEF";
 
 function seeded(seed: string) {
   let state = 2166136261;
@@ -46,9 +44,6 @@ export function createPuzzle(gameId: RankedGameId, seed: string): Puzzle {
   if (gameId === "sequence") {
     return { gameId, sequence: Array.from({ length: 12 }, () => sequenceChars[Math.floor(random() * sequenceChars.length)]) };
   }
-  if (gameId === "node-breach") {
-    return { gameId, sequence: Array.from({ length: 6 }, () => hexChars[Math.floor(random() * hexChars.length)]) };
-  }
   if (gameId === "nim-lock" || gameId === "vault") {
     return { gameId, targetAngles: Array.from({ length: gameId === "vault" ? 5 : 4 }, () => Math.floor(random() * 8) * 45) };
   }
@@ -78,18 +73,18 @@ export function replay(gameId: RankedGameId, seed: string, events: GameEvent[]):
     const limit = puzzle.gameId === "vault" ? 10000 : 20000;
     return { score: Math.max(100, Math.round((limit - duration) / 5) + clicks.length * 100), xp: puzzle.gameId === "vault" ? 220 : 180, valid: true };
   }
-  const target = puzzle.gameId === "nim-pin" ? [puzzle.pin] : puzzle.gameId === "sequence" || puzzle.gameId === "node-breach" ? puzzle.sequence : puzzle.gameId === "memory" ? puzzle.tokens : [];
+  const target = puzzle.gameId === "nim-pin" ? [puzzle.pin] : puzzle.gameId === "sequence" ? puzzle.sequence : puzzle.gameId === "memory" ? puzzle.tokens : [];
   const valid = values.length === target.length && values.every((value, index) => value === target[index]);
   if (!valid) return { score: 0, xp: 0, valid: false, reason: "wrong solution" };
   const duration = events[events.length - 1].t;
   if (duration < target.length * minimumGap) return { score: 0, xp: 0, valid: false, reason: "duration below minimum" };
-  const limit = gameId === "nim-pin" ? 12000 : gameId === "sequence" ? 7000 : gameId === "node-breach" ? 9000 : 2500;
+  const limit = gameId === "nim-pin" ? 12000 : gameId === "sequence" ? 7000 : 2500;
   const score = Math.max(100, Math.round((limit - duration) / (gameId === "sequence" ? 2 : 4)));
-  return { score, xp: gameId === "sequence" ? 180 : gameId === "nim-pin" ? 125 : gameId === "node-breach" ? 200 : 160, valid: true };
+  return { score, xp: gameId === "sequence" ? 180 : gameId === "nim-pin" ? 125 : 160, valid: true };
 }
 
 export function dailyGame(day: string): RankedGameId {
-  const rotation: RankedGameId[] = ["nim-pin", "sequence", "memory", "nim-lock", "vault", "node-breach"];
+  const rotation: RankedGameId[] = ["nim-pin", "sequence", "memory", "nim-lock", "vault"];
   let value = 0;
   for (const character of day) value = (value * 31 + character.charCodeAt(0)) >>> 0;
   return rotation[value % rotation.length];

@@ -11,7 +11,7 @@ import { createPuzzle } from "../packages/game-core/index";
 
 type GameId =
   | "block-rush" | "nim-grid" | "nim-pin" | "sequence"
-  | "memory" | "nim-lock" | "vault" | "sync" | "node-breach";
+  | "memory" | "nim-lock" | "vault" | "sync";
 
 type Result = { score: number; xp: number; time?: number };
 type RankedSubmission = { state: "idle" | "submitting" | "verified" | "rejected"; score?: number; xp?: number; error?: string };
@@ -24,8 +24,7 @@ const games: { id: GameId; name: string; subtitle: string; icon: any; difficulty
   { id: "memory", name: "Address Memory", subtitle: "Remember a fictional address pattern", icon: Shield, difficulty: "Medium" },
   { id: "nim-lock", name: "NIM Lock", subtitle: "Align the rotating lock rings", icon: Lock, difficulty: "Hard" },
   { id: "vault", name: "NIM Vault", subtitle: "Five-ring advanced lock challenge", icon: Trophy, difficulty: "Expert" },
-  { id: "sync", name: "Sync", subtitle: "Time the packet inside the target", icon: Network, difficulty: "Medium" },
-  { id: "node-breach", name: "Node Breach", subtitle: "Reconstruct the node packet", icon: Network, difficulty: "Hard" }
+  { id: "sync", name: "Sync", subtitle: "Time the packet inside the target", icon: Network, difficulty: "Medium" }
 ];
 
 const rand = (n: number) => Math.floor(Math.random() * n);
@@ -56,7 +55,7 @@ function App() {
       setWalletError(e instanceof Error ? e.message : "Wallet connection failed");
     }
   }
-  const rankedGames = ["nim-pin", "sequence", "memory", "nim-lock", "vault", "node-breach"];
+  const rankedGames = ["nim-pin", "sequence", "memory", "nim-lock", "vault"];
   async function launchGame(id: GameId, mode: "ranked" | "daily" = "ranked") {
     setActiveRun(null);
     setRankedSubmission({state:"idle"});
@@ -92,7 +91,6 @@ function Game({id,run,rankedSubmission,onEvent,onFinish}:{id:GameId;run:Run|null
     case "nim-lock": return <RotatingLock count={4} limit={20000} seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} title="NIM LOCK" onFinish={onFinish}/>;
     case "vault": return <RotatingLock count={5} limit={10000} seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} title="NIM VAULT" onFinish={onFinish}/>;
     case "sync": return <Sync onFinish={onFinish}/>;
-    case "node-breach": return <NodeBreach seed={run?.seed} rankedSubmission={rankedSubmission} onEvent={onEvent} onFinish={onFinish}/>;
   }
 }
 
@@ -172,14 +170,6 @@ function Sync({onFinish}:{onFinish:(r:Result)=>void}) {
   function hit(){if(pos>42&&pos<58){const s=score+100;setScore(s);if(s>=500){setDone(true);onFinish({score:s,xp:150})}}else{const t=tries-1;setTries(t);if(t<=0){setDone(true);onFinish({score,xp:20})}}}
   if(done)return <ResultBox result={{score,xp:score>=500?150:20}} onRestart={()=>location.reload()}/>;
   return <div className="challenge"><GameHUD label="SYNC" value={`${score} PTS`} timer={`${tries} attempts`}/><div className="sync-track"><div className="sync-target"/><div className="sync-cursor" style={{left:`${pos}%`}}/></div><button className="primary huge" onClick={hit}>SYNC PACKET</button></div>
-}
-
-function NodeBreach({seed,rankedSubmission,onEvent,onFinish}:{seed?:string;rankedSubmission:RankedSubmission;onEvent:(event:Omit<GameEvent,"t">)=>void;onFinish:(r:Result)=>void}) {
-  const chars="0123456789ABCDEF"; const initialPuzzle = seed ? createPuzzle("node-breach", seed) : null; const [seq]=useState<string[]>(()=>initialPuzzle?.gameId === "node-breach" ? initialPuzzle.sequence : Array.from({length:6},()=>chars[rand(16)])); const [input,setInput]=useState(""); const [time,setTime]=useState(9); const [done,setDone]=useState(false);
-  useEffect(()=>{if(done)return;const t=setInterval(()=>setTime(x=>{if(x<=.1){setDone(true);onFinish({score:0,xp:10});return 0}return x-.1}),100);return()=>clearInterval(t)},[done,onFinish]);
-  function p(c:string){const n=input+c;onEvent({type:"key",value:c});if(seq.slice(0,n.length).join("")!==n){setDone(true);onFinish({score:0,xp:10});return}setInput(n);if(n===seq.join("")){setDone(true);onFinish({score:Math.round(time*100),xp:200})}}
-  if(done){const preview={score:input===seq.join("")?Math.round(time*100):0,xp:input===seq.join("")?200:10};return seed?<RankedResult submission={rankedSubmission} preview={preview} onRestart={()=>location.reload()}/>:<ResultBox result={preview} onRestart={()=>location.reload()}/>}
-  return <div className="challenge"><GameHUD label="NODE BREACH" value={`${input.length}/6`} timer={`${time.toFixed(1)}s`}/><div className="node-code">{seq.map((x,i)=><span key={i}>{i<input.length?x:"•"}</span>)}</div><div className="hexpad">{chars.split("").map(c=><button key={c} onClick={()=>p(c)}>{c}</button>)}</div></div>
 }
 
 function GameHUD({label,value,timer}:{label:string;value:string;timer:string}) {
