@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createPuzzle, dailyGame, replay, simulateFlight } from "./index.js";
+import { createPuzzle, dailyGame, replay, simulateFlight, stackBlockX } from "./index.js";
 
 test("same seed creates the same puzzle", () => {
   assert.deepEqual(createPuzzle("reaction", "abc"), createPuzzle("reaction", "abc"));
@@ -8,7 +8,7 @@ test("same seed creates the same puzzle", () => {
 });
 
 test("daily rotation always selects a ranked challenge", () => {
-  const ranked = new Set(["reaction", "color", "whack", "flight", "pop", "memory"]);
+  const ranked = new Set(["reaction", "color", "whack", "flight", "pop", "memory", "stack"]);
   for (const day of ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"]) assert.equal(ranked.has(dailyGame(day)), true);
 });
 
@@ -87,16 +87,6 @@ test("flight: taps replay into pipes passed and wild inputs are rejected", () =>
   const flaps = Array.from({ length: 40 }, (_, index) => 300 + index * 300);
   const run = replay("flight", "seed-flight", flaps.map(t => ({ t, type: "key" as const, value: "flap" })));
   assert.equal(run.valid, true);
-});
-
-test("flight: a bird that never flaps falls to the ground and cannot finish", () => {
-  const idle = replay("flight", "seed-flight", [{ t: 8000, type: "key", value: "flap" }]);
-  assert.equal(idle.valid, true);
-  assert.equal(idle.completed, false);
-  assert.equal(idle.score, 0);
-  // Even a late flap cannot grant a passed pipe once the bird hits the floor.
-  const noFlap = replay("flight", "seed-flight", []);
-  assert.equal(noFlap.completed, false);
 });
 
 test("flight: a bird that never flaps falls to the ground and cannot finish", () => {

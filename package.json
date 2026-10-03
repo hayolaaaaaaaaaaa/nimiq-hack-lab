@@ -8,7 +8,7 @@
     "api": "tsx server/index.ts",
     "build": "tsc -b && vite build",
     "typecheck:server": "tsc -p tsconfig.server.json",
-    "test": "tsx --test packages/game-core/index.test.ts",
+    "test": "tsx --test packages/game-core/index.test.ts src/ui-format.test.ts",
     "preview": "vite preview --host"
   },
   "dependencies": {
